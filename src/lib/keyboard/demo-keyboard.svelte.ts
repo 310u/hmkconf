@@ -42,7 +42,7 @@ import type {
 } from "."
 import { demoMetadata } from "./metadata"
 
-const { adcResolution, numProfiles, numKeys, numAdvancedKeys, defaultKeymap } =
+const { adcResolution, numProfiles, numKeys, numAdvancedKeys, defaultKeymaps } =
   demoMetadata
 
 type DemoKeyboardProfileState = {
@@ -54,19 +54,21 @@ type DemoKeyboardProfileState = {
   tickRate: number
 }
 
-const defaultProfile: DemoKeyboardProfileState = {
-  keymap: defaultKeymap,
-  actuationMap: [...Array(numKeys)].fill(defaultActuation),
-  advancedKeys: [...Array(numAdvancedKeys)].fill(defaultAdvancedKey),
-  gamepadButtons: Array(numKeys).fill(HMK_GamepadButton.NONE),
-  gamepadOptions: {
-    analogCurve: analogCurvePresets[0].curve,
-    keyboardEnabled: true,
-    gamepadOverride: false,
-    squareJoystick: false,
-    snappyJoystick: true,
-  },
-  tickRate: DEFAULT_TICK_RATE,
+function defaultProfile(profile: number): DemoKeyboardProfileState {
+  return {
+    keymap: defaultKeymaps[profile],
+    actuationMap: Array(numKeys).fill(defaultActuation),
+    advancedKeys: Array(numAdvancedKeys).fill(defaultAdvancedKey),
+    gamepadButtons: Array(numKeys).fill(HMK_GamepadButton.NONE),
+    gamepadOptions: {
+      analogCurve: analogCurvePresets[0].curve,
+      keyboardEnabled: true,
+      gamepadOverride: false,
+      squareJoystick: false,
+      snappyJoystick: true,
+    },
+    tickRate: DEFAULT_TICK_RATE,
+  }
 }
 
 type DemoKeyboardState = {
@@ -86,8 +88,8 @@ export class DemoKeyboard implements Keyboard {
       saveBottomOutThreshold: true,
       highPollingRateEnabled: true,
     },
-    profiles: [...Array(numProfiles)].map(() =>
-      structuredClone(defaultProfile),
+    profiles: [...Array(numProfiles)].map((_, i) =>
+      structuredClone(defaultProfile(i)),
     ),
   }
 
@@ -118,7 +120,7 @@ export class DemoKeyboard implements Keyboard {
     this.#state.options = data
   }
   async resetProfile({ profile }: ResetProfileParams) {
-    this.#state.profiles[profile] = structuredClone(defaultProfile)
+    this.#state.profiles[profile] = structuredClone(defaultProfile(profile))
   }
   async duplicateProfile({ profile, srcProfile }: DuplicateProfileParams) {
     this.#state.profiles[profile] = structuredClone(

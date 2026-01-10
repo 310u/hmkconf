@@ -18,12 +18,13 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import LayerSelect from "$lib/components/layer-select.svelte"
   import { Button } from "$lib/components/ui/button"
   import { keyboardContext } from "$lib/keyboard"
-  import { remapStateContext } from "../context.svelte"
+  import { globalStateContext, remapStateContext } from "../context.svelte"
   import { keymapQueryContext } from "../queries/keymap-query.svelte"
 
+  const { profile } = $derived(globalStateContext.get())
   const remapState = remapStateContext.get()
   const { layer } = $derived(remapState)
-  const { defaultKeymap } = keyboardContext.get().metadata
+  const { defaultKeymaps } = keyboardContext.get().metadata
 
   const keymapQuery = keymapQueryContext.get()
 </script>
@@ -33,7 +34,11 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   <div class="flex items-center gap-2">
     <Button
       onclick={() =>
-        keymapQuery.set({ layer, offset: 0, data: defaultKeymap[layer] })}
+        keymapQuery.set({
+          layer,
+          offset: 0,
+          data: defaultKeymaps[profile][layer],
+        })}
       size="sm"
       variant="destructive"
     >

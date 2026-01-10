@@ -106,22 +106,59 @@ export const keyboardMetadataSchema = z
     numAdvancedKeys: z.int().min(1).max(HMK_MAX_NUM_ADVANCED_KEYS),
 
     layout: keyboardLayoutSchema,
-    defaultKeymap: z.array(z.array(keycodeSchema)),
+    defaultKeymap: z.array(z.array(keycodeSchema)).optional(),
+    defaultKeymaps: z.array(z.array(z.array(keycodeSchema))).optional(),
   })
-  .superRefine((val, ctx) => {
-    if (val.defaultKeymap.length !== val.numLayers) {
+  .transform((val, ctx) => {
+    const getDefaultKeymaps = () => {
+      const defaultKeymaps = val.defaultKeymaps
+      if (defaultKeymaps !== undefined) {
+        return defaultKeymaps
+      } else {
+        const defaultKeymap = val.defaultKeymap
+        return defaultKeymap === undefined
+          ? undefined
+          : [...Array(val.numProfiles)].map(() =>
+              defaultKeymap.map((layer) => [...layer]),
+            )
+      }
+    }
+
+    const defaultKeymaps = getDefaultKeymaps()
+    if (defaultKeymaps === undefined) {
       ctx.addIssue({
         code: "custom",
-        message: `Expected defaultKeymap to have ${val.numLayers} layers`,
+        message: "Expected either defaultKeymap or defaultKeymaps",
+      })
+      return z.NEVER
+    }
+
+    if (defaultKeymaps.length !== val.numProfiles) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Expected defaultKeymaps to have ${val.numProfiles} profiles`,
       })
     }
 
-    if (val.defaultKeymap.some((layer) => layer.length !== val.numKeys)) {
+    if (defaultKeymaps.some((profile) => profile.length !== val.numLayers)) {
       ctx.addIssue({
         code: "custom",
-        message: `Expected defaultKeymap layers to have ${val.numKeys} keys`,
+        message: `Expected defaultKeymaps profiles to have ${val.numLayers} layers`,
       })
     }
+
+    if (
+      defaultKeymaps.some((profile) =>
+        profile.some((layer) => layer.length !== val.numKeys),
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Expected defaultKeymaps layers to have ${val.numKeys} keys`,
+      })
+    }
+
+    return { ...val, defaultKeymaps }
   })
 
 export type KeyboardMetadata = z.infer<typeof keyboardMetadataSchema>
@@ -243,7 +280,7 @@ export const demoMetadata = keyboardMetadataSchema.parse({
       ],
     ],
   },
-  defaultKeymap: [
+  defaultKeymaps: [...Array(4)].map(() => [
     [
       "KC_ESC",
       "KC_1",
@@ -528,5 +565,5 @@ export const demoMetadata = keyboardMetadataSchema.parse({
       "_______",
       "_______",
     ],
-  ],
+  ]),
 })
