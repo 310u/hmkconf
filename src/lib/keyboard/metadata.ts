@@ -34,10 +34,10 @@ const uint16HexSchema = z.union([
 const keycodeSchema = z.union([
   uint8Schema,
   z.string().transform((val, ctx) => {
-    const moKeycode = val.match(/^MO\((\d+\))$/)
+    const moKeycode = val.match(/^MO\((\d+)\)$/)
     if (moKeycode) return MO(parseInt(moKeycode[1]))
 
-    const pfKeycode = val.match(/^PF\((\d+\))$/)
+    const pfKeycode = val.match(/^PF\((\d+)\)$/)
     if (pfKeycode) return PF(parseInt(pfKeycode[1]))
 
     if (!Object.keys(Keycode).includes(val)) {
@@ -119,8 +119,8 @@ export const keyboardMetadataSchema = z
         return defaultKeymap === undefined
           ? undefined
           : [...Array(val.numProfiles)].map(() =>
-              defaultKeymap.map((layer) => [...layer]),
-            )
+            defaultKeymap.map((layer) => [...layer]),
+          )
       }
     }
 
@@ -164,141 +164,161 @@ export const keyboardMetadataSchema = z
 export type KeyboardMetadata = z.infer<typeof keyboardMetadataSchema>
 
 export const demoMetadata = keyboardMetadataSchema.parse({
-  name: "HE60",
-  vendorId: "0xAB50",
-  productId: "0xAB60",
+  name: "Mochiko39HE",
+  vendorId: "0x0108",
+  productId: "0x0110",
   usbHighSpeed: true,
 
   adcResolution: 12,
   numProfiles: 4,
   numLayers: 4,
-  numKeys: 69,
+  numKeys: 39,
   numAdvancedKeys: 32,
 
   layout: {
     labels: [
-      "Split Backspace",
-      "Split R-Shift",
-      ["Bottom Row", "6.25U", "7U", "Split Spacebar"],
+      "default"
     ],
     keymap: [
       [
-        { key: 0 },
-        { key: 1 },
-        { key: 2 },
-        { key: 3 },
-        { key: 4 },
-        { key: 5 },
-        { key: 6 },
-        { key: 7 },
-        { key: 8 },
-        { key: 9 },
-        { key: 10 },
-        { key: 11 },
-        { key: 12 },
-        { key: 14, w: 2, option: [0, 0] },
-        { key: 13, option: [0, 1] },
-        { key: 15, option: [0, 1] },
+        {
+          "key": 0
+        },
+        {
+          "key": 1
+        },
+        {
+          "key": 2
+        },
+        {
+          "key": 3
+        },
+        {
+          "key": 4
+        },
+        {
+          "key": 5,
+          "x": 1.5
+        },
+        {
+          "key": 6
+        },
+        {
+          "key": 7
+        },
+        {
+          "key": 8
+        },
+        {
+          "key": 9
+        }
       ],
       [
-        { key: 16, w: 1.5 },
-        { key: 17 },
-        { key: 18 },
-        { key: 19 },
-        { key: 20 },
-        { key: 21 },
-        { key: 22 },
-        { key: 23 },
-        { key: 24 },
-        { key: 25 },
-        { key: 26 },
-        { key: 27 },
-        { key: 28 },
-        { key: 29, w: 1.5 },
+        {
+          "key": 10
+        },
+        {
+          "key": 11
+        },
+        {
+          "key": 12
+        },
+        {
+          "key": 13
+        },
+        {
+          "key": 14
+        },
+        {
+          "key": 15,
+          "x": 0.25
+        },
+        {
+          "key": 16,
+          "x": 0.25
+        },
+        {
+          "key": 17
+        },
+        {
+          "key": 18
+        },
+        {
+          "key": 19
+        },
+        {
+          "key": 20
+        }
       ],
       [
-        { key: 30, w: 1.75 },
-        { key: 31 },
-        { key: 32 },
-        { key: 33 },
-        { key: 34 },
-        { key: 35 },
-        { key: 36 },
-        { key: 37 },
-        { key: 38 },
-        { key: 39 },
-        { key: 40 },
-        { key: 41 },
-        { key: 42, w: 2.25 },
+        {
+          "key": 21
+        },
+        {
+          "key": 22
+        },
+        {
+          "key": 23
+        },
+        {
+          "key": 24
+        },
+        {
+          "key": 25
+        },
+        {
+          "key": 26,
+          "x": 1.5
+        },
+        {
+          "key": 27
+        },
+        {
+          "key": 28
+        },
+        {
+          "key": 29
+        },
+        {
+          "key": 30
+        }
       ],
       [
-        { key: 43, w: 2.25 },
-        { key: 44 },
-        { key: 45 },
-        { key: 46 },
-        { key: 47 },
-        { key: 48 },
-        { key: 49 },
-        { key: 50 },
-        { key: 51 },
-        { key: 52 },
-        { key: 53 },
-        { key: 55, w: 2.75, option: [1, 0] },
-        { key: 54, w: 1.75, option: [1, 1] },
-        { key: 56, option: [1, 1] },
-      ],
-      [
-        { key: 57, w: 1.25, option: [2, 0] },
-        { key: 58, w: 1.25, option: [2, 0] },
-        { key: 59, w: 1.25, option: [2, 0] },
-        { key: 62, w: 6.25, option: [2, 0] },
-        { key: 65, w: 1.25, option: [2, 0] },
-        { key: 66, w: 1.25, option: [2, 0] },
-        { key: 67, w: 1.25, option: [2, 0] },
-        { key: 68, w: 1.25, option: [2, 0] },
-      ],
-      [
-        { key: 57, w: 1.5, option: [2, 1] },
-        { key: 58, option: [2, 1] },
-        { key: 59, w: 1.5, option: [2, 1] },
-        { key: 63, w: 7, option: [2, 1] },
-        { key: 66, w: 1.5, option: [2, 1] },
-        { key: 67, option: [2, 1] },
-        { key: 68, w: 1.5, option: [2, 1] },
-      ],
-      [
-        { key: 57, w: 1.5, option: [2, 2] },
-        { key: 58, option: [2, 2] },
-        { key: 59, w: 1.5, option: [2, 2] },
-        { key: 60, option: [2, 2] },
-        { key: 61, w: 2.25, option: [2, 2] },
-        { key: 64, w: 2.75, option: [2, 2] },
-        { key: 65, option: [2, 2] },
-        { key: 66, w: 1.5, option: [2, 2] },
-        { key: 67, option: [2, 2] },
-        { key: 68, w: 1.5, option: [2, 2] },
-      ],
-    ],
+        {
+          "key": 31,
+          "w": 1.25
+        },
+        {
+          "key": 32,
+          "w": 1.25
+        },
+        {
+          "key": 33,
+          "w": 2.25
+        },
+        {
+          "key": 34
+        },
+        {
+          "key": 35
+        },
+        {
+          "key": 36,
+          "w": 2.25
+        },
+        {
+          "key": 37,
+          "w": 1.25
+        },
+        {
+          "key": 38,
+          "w": 1.25
+        }
+      ]
+    ]
   },
   defaultKeymaps: [...Array(4)].map(() => [
     [
-      "KC_ESC",
-      "KC_1",
-      "KC_2",
-      "KC_3",
-      "KC_4",
-      "KC_5",
-      "KC_6",
-      "KC_7",
-      "KC_8",
-      "KC_9",
-      "KC_0",
-      "KC_MINS",
-      "KC_EQL",
-      "_______",
-      "KC_BSPC",
-      "_______",
-      "KC_TAB",
       "KC_Q",
       "KC_W",
       "KC_E",
@@ -309,23 +329,17 @@ export const demoMetadata = keyboardMetadataSchema.parse({
       "KC_I",
       "KC_O",
       "KC_P",
-      "KC_LBRC",
-      "KC_RBRC",
-      "KC_BSLS",
-      "KC_CAPS",
       "KC_A",
       "KC_S",
       "KC_D",
       "KC_F",
       "KC_G",
+      "KC_ESC",
       "KC_H",
       "KC_J",
       "KC_K",
       "KC_L",
-      "KC_SCLN",
-      "KC_QUOT",
       "KC_ENT",
-      "KC_LSFT",
       "KC_Z",
       "KC_X",
       "KC_C",
@@ -336,92 +350,96 @@ export const demoMetadata = keyboardMetadataSchema.parse({
       "KC_COMM",
       "KC_DOT",
       "KC_SLSH",
-      "_______",
-      "KC_RSFT",
-      "_______",
-      "KC_LCTL",
       "KC_LGUI",
       "KC_LALT",
-      "_______",
-      "_______",
       "KC_SPC",
-      "_______",
-      "_______",
-      "KC_RALT",
       "MO(1)",
-      "KC_APP",
-      "KC_RCTL",
+      "MO(2)",
+      "KC_BSPC",
+      "KC_RALT",
+      "KC_RCTL"
     ],
     [
-      "KC_GRV",
+      "KC_1",
+      "KC_2",
+      "KC_3",
+      "KC_4",
+      "KC_5",
+      "KC_6",
+      "KC_7",
+      "KC_8",
+      "KC_9",
+      "KC_0",
       "KC_F1",
       "KC_F2",
       "KC_F3",
       "KC_F4",
       "KC_F5",
+      "_______",
       "KC_F6",
       "KC_F7",
       "KC_F8",
       "KC_F9",
+      "KC_QUOT",
+      "KC_LSFT",
+      "KC_MINS",
+      "KC_EQL",
+      "KC_BSLS",
+      "KC_GRV",
+      "KC_CAPS",
       "KC_F10",
       "KC_F11",
       "KC_F12",
-      "_______",
-      "KC_DEL",
-      "_______",
-      "KC_PSCR",
-      "_______",
-      "KC_PGUP",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "PF(0)",
-      "PF(1)",
-      "PF(2)",
-      "PF(3)",
-      "SP_BOOT",
-      "_______",
-      "KC_HOME",
-      "KC_PGDN",
-      "KC_END",
-      "_______",
-      "_______",
-      "_______",
-      "KC_MPRV",
-      "KC_MPLY",
-      "KC_MNXT",
-      "_______",
-      "_______",
-      "PF_SWAP",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "KC_MUTE",
+      "KC_RSFT",
+      "KC_LGUI",
+      "KC_LALT",
+      "KC_SPC",
+      "KC_TAB",
+      "MO(2)",
+      "KC_BSPC",
+      "KC_RALT",
+      "KC_RCTL"
+    ],
+    [
       "KC_VOLD",
-      "KC_VOLU",
-      "_______",
+      "KC_HOME",
       "KC_UP",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
+      "KC_PGUP",
+      "KC_VOLU",
+      "KC_P7",
+      "KC_P8",
+      "KC_P9",
+      "KC_PSLS",
+      "KC_PAST",
       "_______",
       "KC_LEFT",
       "KC_DOWN",
-      "KC_RGHT",
+      "KC_RIGHT",
+      "KC_MUTE",
+      "_______",
+      "KC_P4",
+      "KC_P5",
+      "KC_P6",
+      "KC_PMNS",
+      "KC_PPLS",
+      "_______",
+      "KC_END",
+      "KC_INS",
+      "KC_PGDN",
+      "KC_P0",
+      "KC_P1",
+      "KC_P2",
+      "KC_P3",
+      "KC_PDOT",
+      "KC_EQL",
+      "KC_LGUI",
+      "KC_LALT",
+      "KC_SPC",
+      "MO(1)",
+      "MO(2)",
+      "KC_BSPC",
+      "KC_RALT",
+      "KC_RCTL"
     ],
     [
       "_______",
@@ -462,108 +480,7 @@ export const demoMetadata = keyboardMetadataSchema.parse({
       "_______",
       "_______",
       "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-    ],
-    [
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-    ],
+      "_______"
+    ]
   ]),
 })
