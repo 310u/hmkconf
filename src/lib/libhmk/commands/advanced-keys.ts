@@ -101,6 +101,18 @@ export async function getAdvancedKeys(
             },
           })
           break
+        case HMK_AKType.COMBO:
+          ret.push({
+            layer,
+            key,
+            action: {
+              type,
+              keys: [...Array(4)].map(() => reader.uint8()),
+              keycode: reader.uint8(),
+              term: reader.uint16(),
+            },
+          })
+          break
         case HMK_AKType.NONE:
         default:
           ret.push({ layer, key, action: { type } })
@@ -151,6 +163,13 @@ export async function setAdvancedKeys(
           break
         case HMK_AKType.TOGGLE:
           buffer.push(action.keycode, ...uint16ToUInt8s(action.tappingTerm))
+          break
+        case HMK_AKType.COMBO:
+          buffer.push(
+            ...action.keys,
+            action.keycode,
+            ...uint16ToUInt8s(action.term),
+          )
           break
         case HMK_AKType.NONE:
         default:

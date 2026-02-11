@@ -46,11 +46,15 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       const keys = [key]
       if (action.type === HMK_AKType.NULL_BIND) {
         keys.push(action.secondaryKey)
+      } else if (action.type === HMK_AKType.COMBO) {
+        keys.push(...action.keys.slice(1).filter((k) => k !== 255))
       }
 
       const { keycodes } = getAdvancedKeyMetadata(action.type)
       for (let j = 0; j < keys.length; j++) {
-        advancedKeymap[layer][keys[j]] = keycodes[j]
+        if (keycodes[j]) {
+          advancedKeymap[layer][keys[j]] = keycodes[j]
+        }
         indexMatrix[layer][keys[j]] = i
       }
     }

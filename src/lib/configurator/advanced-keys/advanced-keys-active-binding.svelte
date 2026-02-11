@@ -50,6 +50,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     const ret = [key]
     if (action.type === HMK_AKType.NULL_BIND) {
       ret.push(action.secondaryKey)
+    } else if (action.type === HMK_AKType.COMBO) {
+      ret.push(...action.keys.slice(1).filter((k) => k !== 255))
     }
     return ret
   })
@@ -62,6 +64,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       case HMK_AKType.TAP_HOLD:
         return [action.tapKeycode, action.holdKeycode]
       case HMK_AKType.TOGGLE:
+        return [action.keycode]
+      case HMK_AKType.COMBO:
         return [action.keycode]
       default:
         return []

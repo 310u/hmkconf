@@ -17,6 +17,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import { HMK_AKType, type HMK_AdvancedKey } from "$lib/libhmk/advanced-keys"
   import { cn, type WithoutChildren } from "$lib/utils"
   import type { HTMLAttributes } from "svelte/elements"
+  import ComboConfigMenu from "./combo/combo-config-menu.svelte"
   import { ConfigMenuState, configMenuStateContext } from "./context.svelte"
   import DynamicKeystrokeConfigMenu from "./dynamic-keystroke/dynamic-keystroke-config-menu.svelte"
   import NullBindConfigMenu from "./null-bind/null-bind-config-menu.svelte"
@@ -54,5 +55,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     <TapHoldConfigMenu />
   {:else if type === HMK_AKType.TOGGLE}
     <ToggleConfigMenu />
+  {:else if type === HMK_AKType.COMBO}
+    <ComboConfigMenu />
   {/if}
 </div>

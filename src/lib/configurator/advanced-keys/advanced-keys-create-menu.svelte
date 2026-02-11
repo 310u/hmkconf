@@ -41,7 +41,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   const { title, description, numKeys } = $derived(getAdvancedKeyMetadata(type))
 </script>
 
-<FixedScrollArea class="flex flex-col gap-2 p-4">
+i<FixedScrollArea class="flex flex-col gap-2 p-4">
   <div class="flex items-center justify-between gap-4">
     <div class="font-semibold">{title}</div>
     <div class="flex items-center gap-2">
@@ -53,7 +53,11 @@ this program. If not, see <https://www.gnu.org/licenses/>.
         Cancel
       </Button>
       <Button
-        disabled={!advancedKeys || !keymap || keys.some((key) => key === null)}
+        disabled={!advancedKeys ||
+          !keymap ||
+          (type === HMK_AKType.COMBO
+            ? keys.filter((k) => k !== null).length < 2
+            : keys.some((key) => key === null))}
         onclick={() => {
           if (!advancedKeys || !keymap) return
           const index = advancedKeys.findIndex(
@@ -66,8 +70,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
                 createAdvancedKey({
                   layer,
                   type,
-                  keys: keys as number[],
-                  keycodes: keys.map((key) => keymap[layer][key!]),
+                  keys: keys.filter((k) => k !== null) as number[],
+                  keycodes: keys
+                    .filter((k) => k !== null)
+                    .map((key) => keymap[layer][key!]),
                 }),
               ],
             })

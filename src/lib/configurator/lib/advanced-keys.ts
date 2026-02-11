@@ -21,6 +21,7 @@ import {
   FileQuestionMarkIcon,
   LayersIcon,
   LayoutTemplateIcon,
+  MergeIcon,
   MoveHorizontalIcon,
   ToggleLeftIcon,
 } from "@lucide/svelte"
@@ -82,6 +83,15 @@ export const advancedKeyMetadata: AdvancedKeyMetadata[] = [
       "Toggle between key press and release states. Hold the key for a normal key behavior.",
     numKeys: 1,
     keycodes: [Keycode.AK_TOGGLE],
+  },
+  {
+    type: HMK_AKType.COMBO,
+    icon: MergeIcon,
+    title: "Combo",
+    description:
+      "Trigger an action by pressing multiple keys simultaneously.",
+    numKeys: 4,
+    keycodes: [],
   },
 ]
 
@@ -160,6 +170,22 @@ export function createAdvancedKey(options: {
           type,
           keycode: keycodes[0],
           tappingTerm: DEFAULT_TAPPING_TERM,
+        },
+      }
+    case HMK_AKType.COMBO:
+      return {
+        layer,
+        key: keys[0],
+        action: {
+          type,
+          keys: [
+            keys[0],
+            keys[1] ?? 255,
+            keys[2] ?? 255,
+            keys[3] ?? 255,
+          ],
+          keycode: Keycode.KC_NO,
+          term: 50,
         },
       }
     default:
