@@ -34,9 +34,15 @@
     ToggleVariants & { spacing?: number } = $props()
 
   setToggleGroupCtx({
-    variant,
-    size,
-    spacing,
+    get variant() {
+      return variant
+    },
+    get size() {
+      return size
+    },
+    get spacing() {
+      return spacing
+    },
   })
 </script>
 

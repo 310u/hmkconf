@@ -81,7 +81,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
         }
         disabled={create === null
           ? indexMatrix[layer][key] === null
-          : indexMatrix[layer][key] !== null ||
+          : (create.type !== HMK_AKType.COMBO &&
+              indexMatrix[layer][key] !== null) ||
             (!create.keys.includes(key) &&
               create.keys.every((key) => key !== null))}
         oncontextmenu={(e) => {
