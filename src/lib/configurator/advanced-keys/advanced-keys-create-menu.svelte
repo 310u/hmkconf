@@ -53,7 +53,11 @@ this program. If not, see <https://www.gnu.org/licenses/>.
         Cancel
       </Button>
       <Button
-        disabled={!advancedKeys || !keymap || keys.some((key) => key === null)}
+        disabled={!advancedKeys ||
+          !keymap ||
+          (type === HMK_AKType.COMBO
+            ? keys.filter((k) => k !== null).length < 2
+            : keys.some((k) => k === null))}
         onclick={() => {
           if (!advancedKeys || !keymap) return
           const index = advancedKeys.findIndex(
@@ -66,8 +70,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
                 createAdvancedKey({
                   layer,
                   type,
-                  keys: keys as number[],
-                  keycodes: keys.map((key) => keymap[layer][key!]),
+                  keys: keys.filter((k) => k !== null) as number[],
+                  keycodes: keys
+                    .filter((k) => k !== null)
+                    .map((key) => keymap[layer][key!]),
                 }),
               ],
             })

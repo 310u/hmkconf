@@ -30,33 +30,54 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   const { current: advancedKeys } = $derived(advancedKeysQuery.advancedKeys)
   const { current: keymap } = $derived(keymapQueryContext.get().keymap)
 
-  const { disabled, advancedKeymap, indexMatrix } = $derived.by(() => {
-    if (!advancedKeys || !keymap) {
-      return { disabled: true } as const
-    }
-
-    const advancedKeymap = keymap.map((row) => [...row])
-    const indexMatrix: (number | null)[][] = keymap.map((row) =>
-      Array(row.length).fill(null),
-    )
-    for (let i = 0; i < advancedKeys.length; i++) {
-      const { layer, key, action } = advancedKeys[i]
-      if (action.type === HMK_AKType.NONE) continue
-
-      const keys = [key]
-      if (action.type === HMK_AKType.NULL_BIND) {
-        keys.push(action.secondaryKey)
+  const { disabled, advancedKeymap, indexMatrix, mainAkMatrix } = $derived.by(
+    () => {
+      if (!advancedKeys || !keymap) {
+        return { disabled: true } as const
       }
 
-      const { keycodes } = getAdvancedKeyMetadata(action.type)
-      for (let j = 0; j < keys.length; j++) {
-        advancedKeymap[layer][keys[j]] = keycodes[j]
-        indexMatrix[layer][keys[j]] = i
-      }
-    }
+      const advancedKeymap = keymap.map((row) => [...row])
+      const indexMatrix: (number | null)[][] = keymap.map((row) =>
+        Array(row.length).fill(null),
+      )
+      const mainAkMatrix: (number | null)[][] = keymap.map((row) =>
+        Array(row.length).fill(null),
+      )
 
-    return { disabled: false, advancedKeymap, indexMatrix } as const
-  })
+      for (let i = 0; i < advancedKeys.length; i++) {
+        const { layer, key, action } = advancedKeys[i]
+        if (action.type === HMK_AKType.NONE) continue
+
+        const keys = [key]
+        if (action.type === HMK_AKType.NULL_BIND) {
+          keys.push(action.secondaryKey)
+        }
+
+        const { keycodes } = getAdvancedKeyMetadata(action.type)
+
+        if (action.type === HMK_AKType.COMBO) {
+          for (const key of action.keys) {
+            if (key === 255) continue
+            advancedKeymap[layer][key] = keycodes[0]
+            indexMatrix[layer][key] = i
+          }
+        } else {
+          for (let j = 0; j < keys.length; j++) {
+            advancedKeymap[layer][keys[j]] = keycodes[j]
+            indexMatrix[layer][keys[j]] = i
+            mainAkMatrix[layer][keys[j]] = i
+          }
+        }
+      }
+
+      return {
+        disabled: false,
+        advancedKeymap,
+        indexMatrix,
+        mainAkMatrix,
+      } as const
+    },
+  )
 </script>
 
 <KeyboardEditorKeyboard>
@@ -77,7 +98,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
         }
         disabled={create === null
           ? indexMatrix[layer][key] === null
-          : indexMatrix[layer][key] !== null ||
+          : (create.type !== HMK_AKType.COMBO &&
+              mainAkMatrix[layer][key] !== null) ||
             (!create.keys.includes(key) &&
               create.keys.every((key) => key !== null))}
         oncontextmenu={(e) => {
