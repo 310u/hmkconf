@@ -17,6 +17,7 @@ import type { HMK_Calibration, HMK_Options } from "$lib/libhmk"
 import type { HMK_Actuation } from "$lib/libhmk/actuation"
 import type { HMK_AdvancedKey } from "$lib/libhmk/advanced-keys"
 import type { HMK_AnalogInfo } from "$lib/libhmk/commands"
+import type { HMK_AnalogConfig } from "$lib/libhmk/commands/analog-config"
 import type { HMK_GamepadOptions } from "$lib/libhmk/gamepad"
 import { Context } from "runed"
 import type { KeyboardMetadata } from "./metadata"
@@ -50,6 +51,9 @@ export type GetGamepadButtonsParams = GetProfileParams
 export type SetGamepadButtonsParams = SetProfileArrayParams<number>
 export type GetGamepadOptionsParams = GetProfileParams
 export type SetGamepadOptionsParams = SetProfileParams<HMK_GamepadOptions>
+
+export type GetAnalogConfigParams = GetProfileParams
+export type SetAnalogConfigParams = SetProfileArrayParams<HMK_AnalogConfig>
 
 export type KeyboardState = {
   id: string
@@ -89,6 +93,8 @@ export type KeyboardAction = {
     params: GetGamepadOptionsParams,
   ): Promise<HMK_GamepadOptions>
   setGamepadOptions(params: SetGamepadOptionsParams): Promise<void>
+  getAnalogConfig(params: GetAnalogConfigParams): Promise<HMK_AnalogConfig[]>
+  setAnalogConfig(params: SetAnalogConfigParams): Promise<void>
 }
 
 export type Keyboard = KeyboardState & KeyboardAction

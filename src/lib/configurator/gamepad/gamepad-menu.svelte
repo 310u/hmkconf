@@ -18,6 +18,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import * as Tabs from "$lib/components/ui/tabs"
   import { gamepadStateContext } from "../context.svelte"
   import { optionsQueryContext } from "../queries/options-query.svelte"
+  import GamepadAnalogInputTab from "./gamepad-analog-input-tab.svelte"
   import GamepadAnalogTab from "./gamepad-analog-tab.svelte"
   import GamepadSetupTab from "./gamepad-setup-tab.svelte"
 
@@ -34,7 +35,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   <div class="flex items-center gap-4 p-4 pb-0">
     <Tabs.List>
       <Tabs.Trigger value="setup">Setup</Tabs.Trigger>
-      <Tabs.Trigger value="analog">Analog</Tabs.Trigger>
+      <Tabs.Trigger value="analog">Analog Curve</Tabs.Trigger>
+      <Tabs.Trigger value="inputs">Inputs</Tabs.Trigger>
     </Tabs.List>
     {#if options && !options.xInputEnabled}
       <Badge variant="destructive">XInput interface is disabled</Badge>
@@ -48,6 +50,11 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   <Tabs.Content value="analog">
     {#snippet child({ props })}
       <GamepadAnalogTab {...props} />
+    {/snippet}
+  </Tabs.Content>
+  <Tabs.Content value="inputs">
+    {#snippet child({ props })}
+      <GamepadAnalogInputTab {...props} />
     {/snippet}
   </Tabs.Content>
 </Tabs.Root>

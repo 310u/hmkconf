@@ -26,6 +26,7 @@ import type {
   DuplicateProfileParams,
   GetActuationMapParams,
   GetAdvancedKeysParams,
+  GetAnalogConfigParams,
   GetGamepadButtonsParams,
   GetGamepadOptionsParams,
   GetKeymapParams,
@@ -93,13 +94,13 @@ export class DemoKeyboard implements Keyboard {
     ),
   }
 
-  async disconnect() {}
-  async forget() {}
+  async disconnect() { }
+  async forget() { }
 
-  async reboot() {}
-  async bootloader() {}
-  async factoryReset() {}
-  async recalibrate() {}
+  async reboot() { }
+  async bootloader() { }
+  async factoryReset() { }
+  async recalibrate() { }
   async analogInfo() {
     return Array(numKeys).fill({ adcValue: 0, distance: 0 })
   }
@@ -109,7 +110,7 @@ export class DemoKeyboard implements Keyboard {
       initialBottomOutThreshold: (1 << adcResolution) - 1,
     }
   }
-  async setCalibration() {}
+  async setCalibration() { }
   async getProfile() {
     return 0
   }
@@ -172,4 +173,8 @@ export class DemoKeyboard implements Keyboard {
   async setTickRate({ profile, data }: SetTickRateParams) {
     this.#state.profiles[profile].tickRate = data
   }
+  async getAnalogConfig(params: GetAnalogConfigParams) {
+    return []
+  }
+  async setAnalogConfig(params: SetAnalogConfigParams) { }
 }
