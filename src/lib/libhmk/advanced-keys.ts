@@ -77,6 +77,8 @@ export const hmkAKTapHoldSchema = z.object({
   holdKeycode: uint8Schema,
   tappingTerm: uint16Schema,
   holdOnOtherKeyPress: z.boolean(),
+  permissiveHold: z.boolean().default(false),
+  retroTapping: z.boolean().default(false),
 })
 
 export type HMK_AKTapHold = z.infer<typeof hmkAKTapHoldSchema>

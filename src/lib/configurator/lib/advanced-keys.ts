@@ -160,6 +160,8 @@ export function createAdvancedKey(options: {
           holdKeycode: Keycode.KC_NO,
           tappingTerm: DEFAULT_TAPPING_TERM,
           holdOnOtherKeyPress: false,
+          permissiveHold: false,
+          retroTapping: false,
         },
       }
     case HMK_AKType.TOGGLE:

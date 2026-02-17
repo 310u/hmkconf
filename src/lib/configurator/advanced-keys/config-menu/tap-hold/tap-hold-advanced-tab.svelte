@@ -45,6 +45,24 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     id="hold-on-other-key-press"
     title="Hold on Other Key Press"
   />
+  <Switch
+    bind:checked={
+      () => action.permissiveHold,
+      (v) => configMenuState.updateAction({ ...action, permissiveHold: v })
+    }
+    description="Immediately perform the hold action if another non-Tap-Hold key is tapped (pressed and then released)."
+    id="permissive-hold"
+    title="Permissive Hold"
+  />
+  <Switch
+    bind:checked={
+      () => action.retroTapping,
+      (v) => configMenuState.updateAction({ ...action, retroTapping: v })
+    }
+    description="Perform the tap action if the key is held longer than the tapping term and released without any other key being pressed."
+    id="retro-tapping"
+    title="Retro Tapping"
+  />
   <CommitSlider
     bind:committed={
       () => action.tappingTerm,

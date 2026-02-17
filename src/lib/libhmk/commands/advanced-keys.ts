@@ -87,6 +87,8 @@ export async function getAdvancedKeys(
               holdKeycode: reader.uint8(),
               tappingTerm: reader.uint16(),
               holdOnOtherKeyPress: reader.uint8() !== 0,
+              permissiveHold: reader.uint8() !== 0,
+              retroTapping: reader.uint8() !== 0,
             },
           })
           break
@@ -164,6 +166,8 @@ export async function setAdvancedKeys(
             action.holdKeycode,
             ...uint16ToUInt8s(action.tappingTerm),
             action.holdOnOtherKeyPress ? 1 : 0,
+            action.permissiveHold ? 1 : 0,
+            action.retroTapping ? 1 : 0,
           )
           break
         case HMK_AKType.TOGGLE:
