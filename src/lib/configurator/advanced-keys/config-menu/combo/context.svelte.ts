@@ -1,4 +1,10 @@
 /*
+ * Combo Config Menu Context
+ *
+ * Provides shared state for the combo configuration UI.
+ * `bindingSelected` tracks whether the output keycode toggle button is active,
+ * enabling the bindings tab to know when a keycode selection should be applied.
+ *
  * This program is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, either version 3 of the License, or (at your option) any later
