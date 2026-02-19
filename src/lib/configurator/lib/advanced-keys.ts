@@ -162,6 +162,7 @@ export function createAdvancedKey(options: {
           tappingTerm: DEFAULT_TAPPING_TERM,
           flavor: HMK_TapHoldFlavor.HOLD_PREFERRED,
           retroTapping: false,
+          holdWhileUndecided: false,
           quickTapMs: 0,
           requirePriorIdleMs: 0,
         },

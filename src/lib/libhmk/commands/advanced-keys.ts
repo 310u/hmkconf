@@ -94,6 +94,7 @@ export async function getAdvancedKeys(
               tappingTerm,
               flavor: flags & 0x03,
               retroTapping: ((flags >> 2) & 1) !== 0,
+              holdWhileUndecided: ((flags >> 3) & 1) !== 0,
               quickTapMs,
               requirePriorIdleMs,
             },
@@ -171,7 +172,8 @@ export async function setAdvancedKeys(
         case HMK_AKType.TAP_HOLD: {
           const flags =
             (action.flavor & 0x03) |
-            ((action.retroTapping ? 1 : 0) << 2)
+            ((action.retroTapping ? 1 : 0) << 2) |
+            ((action.holdWhileUndecided ? 1 : 0) << 3)
           buffer.push(
             action.tapKeycode,
             action.holdKeycode,

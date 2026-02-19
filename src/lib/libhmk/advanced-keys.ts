@@ -92,6 +92,7 @@ export const hmkAKTapHoldSchema = z.object({
     .nativeEnum(HMK_TapHoldFlavor)
     .default(HMK_TapHoldFlavor.HOLD_PREFERRED),
   retroTapping: z.boolean().default(false),
+  holdWhileUndecided: z.boolean().default(false),
   quickTapMs: uint16Schema.default(0),
   requirePriorIdleMs: uint16Schema.default(0),
 })

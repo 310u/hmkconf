@@ -81,6 +81,15 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     id="retro-tapping"
     title="Retro Tapping"
   />
+  <Switch
+    bind:checked={
+      () => action.holdWhileUndecided,
+      (v) => configMenuState.updateAction({ ...action, holdWhileUndecided: v })
+    }
+    description="Immediately activate the hold action on press while the tap/hold decision is pending. If the key resolves as tap, the hold action is cancelled. Useful for modifiers with mouse clicks."
+    id="hold-while-undecided"
+    title="Hold While Undecided"
+  />
   <CommitSlider
     bind:committed={
       () => action.tappingTerm,
