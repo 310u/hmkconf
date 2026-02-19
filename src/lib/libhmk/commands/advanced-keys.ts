@@ -129,6 +129,16 @@ export async function getAdvancedKeys(
             },
           })
           break
+        case HMK_AKType.MACRO:
+          ret.push({
+            layer,
+            key,
+            action: {
+              type,
+              macroIndex: reader.uint8(),
+            },
+          })
+          break
         case HMK_AKType.NONE:
         default:
           ret.push({ layer, key, action: { type } })
@@ -193,6 +203,9 @@ export async function setAdvancedKeys(
             action.outputKeycode,
             ...uint16ToUInt8s(action.term),
           )
+          break
+        case HMK_AKType.MACRO:
+          buffer.push(action.macroIndex)
           break
         case HMK_AKType.NONE:
         default:

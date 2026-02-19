@@ -21,6 +21,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import ComboConfigMenu from "./combo/combo-config-menu.svelte"
   import { ConfigMenuState, configMenuStateContext } from "./context.svelte"
   import DynamicKeystrokeConfigMenu from "./dynamic-keystroke/dynamic-keystroke-config-menu.svelte"
+  import MacroConfigMenu from "./macro/macro-config-menu.svelte"
   import NullBindConfigMenu from "./null-bind/null-bind-config-menu.svelte"
   import TapHoldConfigMenu from "./tap-hold/tap-hold-config-menu.svelte"
   import ToggleConfigMenu from "./toggle/toggle-config-menu.svelte"
@@ -58,5 +59,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     <ToggleConfigMenu />
   {:else if type === HMK_AKType.COMBO}
     <ComboConfigMenu />
+  {:else if type === HMK_AKType.MACRO}
+    <MacroConfigMenu />
   {/if}
 </div>

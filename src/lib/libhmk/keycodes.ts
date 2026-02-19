@@ -315,6 +315,7 @@ export enum Keycode {
   AK_TAP_HOLD = 0x103,
   AK_TOGGLE = 0x104,
   AK_COMBO = 0x105,
+  AK_MACRO = 0x106,
 
   // Gamepad keycodes (for UI only)
   GP_BUTTON_A = 0x200,

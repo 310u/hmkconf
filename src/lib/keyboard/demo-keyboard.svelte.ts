@@ -20,6 +20,8 @@ import {
   DEFAULT_TICK_RATE,
   defaultAdvancedKey,
   type HMK_AdvancedKey,
+  type HMK_Macro,
+  NUM_MACROS,
 } from "$lib/libhmk/advanced-keys"
 import { HMK_GamepadButton, type HMK_GamepadOptions } from "$lib/libhmk/gamepad"
 import type {
@@ -34,7 +36,10 @@ import type {
   ResetProfileParams,
   SetActuationMapParams,
   SetAdvancedKeysParams,
+  SetCalibrationParams,
   SetGamepadButtonsParams,
+  GetMacrosParams,
+  SetMacrosParams,
   SetGamepadOptionsParams,
   SetKeymapParams,
   SetOptionsParams,
@@ -49,6 +54,7 @@ type DemoKeyboardProfileState = {
   keymap: number[][]
   actuationMap: HMK_Actuation[]
   advancedKeys: HMK_AdvancedKey[]
+  macros: HMK_Macro[]
   gamepadButtons: number[]
   gamepadOptions: HMK_GamepadOptions
   tickRate: number
@@ -59,6 +65,7 @@ function defaultProfile(profile: number): DemoKeyboardProfileState {
     keymap: defaultKeymaps[profile],
     actuationMap: Array(numKeys).fill(defaultActuation),
     advancedKeys: Array(numAdvancedKeys).fill(defaultAdvancedKey),
+    macros: Array(NUM_MACROS).fill({ events: [] }),
     gamepadButtons: Array(numKeys).fill(HMK_GamepadButton.NONE),
     gamepadOptions: {
       analogCurve: analogCurvePresets[0].curve,
@@ -93,13 +100,13 @@ export class DemoKeyboard implements Keyboard {
     ),
   }
 
-  async disconnect() {}
-  async forget() {}
+  async disconnect() { }
+  async forget() { }
 
-  async reboot() {}
-  async bootloader() {}
-  async factoryReset() {}
-  async recalibrate() {}
+  async reboot() { }
+  async bootloader() { }
+  async factoryReset() { }
+  async recalibrate() { }
   async analogInfo() {
     return Array(numKeys).fill({ adcValue: 0, distance: 0 })
   }
@@ -109,7 +116,7 @@ export class DemoKeyboard implements Keyboard {
       initialBottomOutThreshold: (1 << adcResolution) - 1,
     }
   }
-  async setCalibration() {}
+  async setCalibration() { }
   async getProfile() {
     return 0
   }
@@ -171,5 +178,13 @@ export class DemoKeyboard implements Keyboard {
   }
   async setTickRate({ profile, data }: SetTickRateParams) {
     this.#state.profiles[profile].tickRate = data
+  }
+  async getMacros({ profile }: GetMacrosParams) {
+    return this.#state.profiles[profile].macros
+  }
+  async setMacros({ profile, offset, data }: SetMacrosParams) {
+    for (let i = 0; i < data.length; i++) {
+      this.#state.profiles[profile].macros[offset + i] = data[i]
+    }
   }
 }

@@ -24,6 +24,7 @@ import {
   LinkIcon,
   MoveHorizontalIcon,
   ToggleLeftIcon,
+  ScrollTextIcon,
 } from "@lucide/svelte"
 import { displayUInt8 } from "$lib/integer"
 import {
@@ -93,6 +94,14 @@ export const advancedKeyMetadata: AdvancedKeyMetadata[] = [
       "Trigger an action by pressing multiple keys simultaneously.",
     numKeys: 4,
     keycodes: [Keycode.AK_COMBO],
+  },
+  {
+    type: HMK_AKType.MACRO,
+    icon: ScrollTextIcon,
+    title: "Macro",
+    description: "Play a sequence of key events.",
+    numKeys: 1,
+    keycodes: [Keycode.AK_MACRO],
   },
 ]
 
@@ -187,6 +196,15 @@ export function createAdvancedKey(options: {
           outputKeycode: Keycode.KC_NO,
           term: 50, // Default 50ms
         }
+      }
+    case HMK_AKType.MACRO:
+      return {
+        layer,
+        key: keys[0],
+        action: {
+          type,
+          macroIndex: 0,
+        },
       }
     default:
       return defaultAdvancedKey
