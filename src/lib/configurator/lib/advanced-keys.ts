@@ -33,6 +33,7 @@ import {
   HMK_AKType,
   HMK_DKSAction,
   HMK_NullBindBehavior,
+  HMK_TapHoldFlavor,
   type HMK_AdvancedKey,
 } from "$lib/libhmk/advanced-keys"
 import { Keycode } from "$lib/libhmk/keycodes"
@@ -159,9 +160,10 @@ export function createAdvancedKey(options: {
           tapKeycode: keycodes[0],
           holdKeycode: Keycode.KC_NO,
           tappingTerm: DEFAULT_TAPPING_TERM,
-          holdOnOtherKeyPress: false,
-          permissiveHold: false,
+          flavor: HMK_TapHoldFlavor.HOLD_PREFERRED,
           retroTapping: false,
+          quickTapMs: 0,
+          requirePriorIdleMs: 0,
         },
       }
     case HMK_AKType.TOGGLE:
@@ -236,6 +238,38 @@ export function getNullBindBehaviorMetadata(
     }
   )
 }
+
+export type TapHoldFlavorMetadata = {
+  flavor: HMK_TapHoldFlavor
+  title: string
+  description: string
+}
+
+export const tapHoldFlavorMetadata: TapHoldFlavorMetadata[] = [
+  {
+    flavor: HMK_TapHoldFlavor.HOLD_PREFERRED,
+    title: "Hold Preferred",
+    description:
+      "Trigger hold when tapping term expires or another key is pressed.",
+  },
+  {
+    flavor: HMK_TapHoldFlavor.BALANCED,
+    title: "Balanced",
+    description:
+      "Trigger hold when tapping term expires or another key is pressed and released.",
+  },
+  {
+    flavor: HMK_TapHoldFlavor.TAP_PREFERRED,
+    title: "Tap Preferred",
+    description: "Trigger hold only when tapping term expires.",
+  },
+  {
+    flavor: HMK_TapHoldFlavor.TAP_UNLESS_INTERRUPTED,
+    title: "Tap Unless Interrupted",
+    description:
+      "Trigger hold only when another key is pressed before the tapping term expires.",
+  },
+]
 
 export const DKS_BIT_COLUMN_WIDTH = 90
 export const DKS_ROW_PADDING = 8

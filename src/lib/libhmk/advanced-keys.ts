@@ -71,14 +71,29 @@ export const hmkAKDynamicKeystrokeSchema = z.object({
 
 export type HMK_AKDynamicKeystroke = z.infer<typeof hmkAKDynamicKeystrokeSchema>
 
+export enum HMK_TapHoldFlavor {
+  HOLD_PREFERRED = 0,
+  BALANCED,
+  TAP_PREFERRED,
+  TAP_UNLESS_INTERRUPTED,
+}
+
+export const DEFAULT_QUICK_TAP_MS = 0
+export const MAX_QUICK_TAP_MS = 1000
+export const DEFAULT_REQUIRE_PRIOR_IDLE_MS = 0
+export const MAX_REQUIRE_PRIOR_IDLE_MS = 1000
+
 export const hmkAKTapHoldSchema = z.object({
   type: z.literal(HMK_AKType.TAP_HOLD),
   tapKeycode: uint8Schema,
   holdKeycode: uint8Schema,
   tappingTerm: uint16Schema,
-  holdOnOtherKeyPress: z.boolean(),
-  permissiveHold: z.boolean().default(false),
+  flavor: z
+    .nativeEnum(HMK_TapHoldFlavor)
+    .default(HMK_TapHoldFlavor.HOLD_PREFERRED),
   retroTapping: z.boolean().default(false),
+  quickTapMs: uint16Schema.default(0),
+  requirePriorIdleMs: uint16Schema.default(0),
 })
 
 export type HMK_AKTapHold = z.infer<typeof hmkAKTapHoldSchema>

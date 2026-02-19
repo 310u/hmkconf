@@ -77,21 +77,29 @@ export async function getAdvancedKeys(
             },
           })
           break
-        case HMK_AKType.TAP_HOLD:
+        case HMK_AKType.TAP_HOLD: {
+          const tapKeycode = reader.uint8()
+          const holdKeycode = reader.uint8()
+          const tappingTerm = reader.uint16()
+          const flags = reader.uint8()
+          const quickTapMs = reader.uint16()
+          const requirePriorIdleMs = reader.uint16()
           ret.push({
             layer,
             key,
             action: {
               type,
-              tapKeycode: reader.uint8(),
-              holdKeycode: reader.uint8(),
-              tappingTerm: reader.uint16(),
-              holdOnOtherKeyPress: reader.uint8() !== 0,
-              permissiveHold: reader.uint8() !== 0,
-              retroTapping: reader.uint8() !== 0,
+              tapKeycode,
+              holdKeycode,
+              tappingTerm,
+              flavor: flags & 0x03,
+              retroTapping: ((flags >> 2) & 1) !== 0,
+              quickTapMs,
+              requirePriorIdleMs,
             },
           })
           break
+        }
         case HMK_AKType.TOGGLE:
           ret.push({
             layer,
@@ -160,16 +168,20 @@ export async function setAdvancedKeys(
             action.bottomOutPoint,
           )
           break
-        case HMK_AKType.TAP_HOLD:
+        case HMK_AKType.TAP_HOLD: {
+          const flags =
+            (action.flavor & 0x03) |
+            ((action.retroTapping ? 1 : 0) << 2)
           buffer.push(
             action.tapKeycode,
             action.holdKeycode,
             ...uint16ToUInt8s(action.tappingTerm),
-            action.holdOnOtherKeyPress ? 1 : 0,
-            action.permissiveHold ? 1 : 0,
-            action.retroTapping ? 1 : 0,
+            flags,
+            ...uint16ToUInt8s(action.quickTapMs),
+            ...uint16ToUInt8s(action.requirePriorIdleMs),
           )
           break
+        }
         case HMK_AKType.TOGGLE:
           buffer.push(action.keycode, ...uint16ToUInt8s(action.tappingTerm))
           break

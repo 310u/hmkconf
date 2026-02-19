@@ -14,9 +14,16 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <script lang="ts">
+  import { InfoIcon } from "@lucide/svelte"
   import CommitSlider from "$lib/components/commit-slider.svelte"
   import Switch from "$lib/components/switch.svelte"
+  import { Label } from "$lib/components/ui/label"
+  import * as RadioGroup from "$lib/components/ui/radio-group"
+  import * as Tooltip from "$lib/components/ui/tooltip"
+  import { tapHoldFlavorMetadata } from "$lib/configurator/lib/advanced-keys"
   import {
+    MAX_QUICK_TAP_MS,
+    MAX_REQUIRE_PRIOR_IDLE_MS,
     MAX_TAPPING_TERM,
     MIN_TAPPING_TERM,
     type HMK_AKTapHold,
@@ -36,24 +43,35 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 </script>
 
 <div class={cn("flex flex-col gap-4", className)} {...props}>
-  <Switch
-    bind:checked={
-      () => action.holdOnOtherKeyPress,
-      (v) => configMenuState.updateAction({ ...action, holdOnOtherKeyPress: v })
+  <div class="grid text-sm text-wrap">
+    <span class="font-medium">Interrupt Flavor</span>
+    <span class="text-muted-foreground">
+      Select how the hold-tap resolves when another key is pressed while the
+      hold-tap key is held.
+    </span>
+  </div>
+  <RadioGroup.Root
+    bind:value={
+      () => String(action.flavor),
+      (v) => configMenuState.updateAction({ ...action, flavor: Number(v) })
     }
-    description="Immediately perform the hold action if another non-Tap-Hold key is pressed."
-    id="hold-on-other-key-press"
-    title="Hold on Other Key Press"
-  />
-  <Switch
-    bind:checked={
-      () => action.permissiveHold,
-      (v) => configMenuState.updateAction({ ...action, permissiveHold: v })
-    }
-    description="Immediately perform the hold action if another non-Tap-Hold key is tapped (pressed and then released)."
-    id="permissive-hold"
-    title="Permissive Hold"
-  />
+  >
+    {#each tapHoldFlavorMetadata as { flavor, title, description } (flavor)}
+      <div class="flex items-center gap-3">
+        <RadioGroup.Item id={String(flavor)} value={String(flavor)} />
+        <div class="flex flex-1 items-center gap-2">
+          <Label class="flex-1" for={String(flavor)}>{title}</Label>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <InfoIcon class="size-4" />
+              <span class="sr-only">Info</span>
+            </Tooltip.Trigger>
+            <Tooltip.Content>{description}</Tooltip.Content>
+          </Tooltip.Root>
+        </div>
+      </div>
+    {/each}
+  </RadioGroup.Root>
   <Switch
     bind:checked={
       () => action.retroTapping,
@@ -74,6 +92,30 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     max={MAX_TAPPING_TERM}
     step={10}
     title="Tapping Term"
+  />
+  <CommitSlider
+    bind:committed={
+      () => action.quickTapMs,
+      (v) => configMenuState.updateAction({ ...action, quickTapMs: v })
+    }
+    description="If the key is re-pressed within this time of the last tap, it will always produce a tap. Set to 0 to disable."
+    display={(v) => (v === 0 ? "Disabled" : `${v}ms`)}
+    min={0}
+    max={MAX_QUICK_TAP_MS}
+    step={10}
+    title="Quick Tap"
+  />
+  <CommitSlider
+    bind:committed={
+      () => action.requirePriorIdleMs,
+      (v) => configMenuState.updateAction({ ...action, requirePriorIdleMs: v })
+    }
+    description="If pressed within this time of another key press, it will always produce a tap. Useful for home-row mods. Set to 0 to disable."
+    display={(v) => (v === 0 ? "Disabled" : `${v}ms`)}
+    min={0}
+    max={MAX_REQUIRE_PRIOR_IDLE_MS}
+    step={10}
+    title="Require Prior Idle"
   />
   <TickRateSlider />
 </div>
