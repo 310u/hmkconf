@@ -43,7 +43,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     <div class="flex flex-col gap-2">
       {#each advancedKeyMetadata as { type, icon: Icon, title, description } (type)}
         <Button
-          class="size-full gap-4 p-2"
+          class="size-full justify-start gap-4 p-2"
           onclick={() => advancedKeysState.createOpen(type)}
           size="lg"
           variant="outline"
