@@ -174,6 +174,7 @@ export function createAdvancedKey(options: {
           holdWhileUndecided: false,
           quickTapMs: 0,
           requirePriorIdleMs: 0,
+          doubleTapKeycode: Keycode.KC_NO,
         },
       }
     case HMK_AKType.TOGGLE:

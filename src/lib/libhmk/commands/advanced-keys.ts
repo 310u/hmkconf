@@ -24,8 +24,8 @@ import type { KeyboardMetadata } from "$lib/keyboard/metadata"
 import { HMK_Command } from "."
 import { HMK_AKType, type HMK_AdvancedKey } from "../advanced-keys"
 
-export const ADVANCED_KEY_SIZE = 12
-const GET_ADVANCED_KEYS_MAX_ENTRIES = 5
+export const ADVANCED_KEY_SIZE = 13
+const GET_ADVANCED_KEYS_MAX_ENTRIES = 4
 
 export async function getAdvancedKeys(
   commander: Commander,
@@ -84,6 +84,7 @@ export async function getAdvancedKeys(
           const flags = reader.uint8()
           const quickTapMs = reader.uint16()
           const requirePriorIdleMs = reader.uint16()
+          const doubleTapKeycode = reader.uint8()
           ret.push({
             layer,
             key,
@@ -97,6 +98,7 @@ export async function getAdvancedKeys(
               holdWhileUndecided: ((flags >> 3) & 1) !== 0,
               quickTapMs,
               requirePriorIdleMs,
+              doubleTapKeycode,
             },
           })
           break
@@ -150,7 +152,7 @@ export async function getAdvancedKeys(
   return ret
 }
 
-const SET_ADVANCED_KEYS_MAX_ENTRIES = 5
+const SET_ADVANCED_KEYS_MAX_ENTRIES = 3
 
 export async function setAdvancedKeys(
   commander: Commander,
@@ -191,6 +193,7 @@ export async function setAdvancedKeys(
             flags,
             ...uint16ToUInt8s(action.quickTapMs),
             ...uint16ToUInt8s(action.requirePriorIdleMs),
+            action.doubleTapKeycode,
           )
           break
         }

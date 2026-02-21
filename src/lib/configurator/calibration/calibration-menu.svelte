@@ -50,6 +50,18 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       title="Save Bottom Out Threshold"
       description="Periodically save the per-key bottom-out threshold values after some inactivity to be restored on next boot. The saved values will only be cleared on recalibration. This setting applies globally across all profiles."
     />
+    <Switch
+      bind:checked={
+        () => options?.continuousCalibration ?? false,
+        (v) =>
+          options &&
+          optionsQuery.set({ data: { ...options, continuousCalibration: v } })
+      }
+      disabled={demo || !options}
+      id="continuous-calibration"
+      title="Continuous Auto-Calibration"
+      description="Continuously tracks and adjusts the resting analog baseline to account for temperature drift when keys are not pressed. Prevents deadzone shifts over long play sessions. This setting applies globally across all profiles."
+    />
     <CommitSlider
       bind:committed={
         () => calibration?.initialRestValue ?? 0,

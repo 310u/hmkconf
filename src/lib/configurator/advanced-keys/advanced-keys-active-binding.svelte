@@ -67,6 +67,13 @@ this program. If not, see <https://www.gnu.org/licenses/>.
         return [action.keycode]
       case HMK_AKType.COMBO:
         return [action.outputKeycode]
+      case HMK_AKType.TAP_DANCE:
+        return [
+          action.onTap,
+          action.onHold,
+          action.onDoubleTap,
+          action.onTapHold,
+        ].filter((k) => k !== undefined)
       default:
         return []
     }

@@ -16,30 +16,40 @@
 import { DataViewReader } from "$lib/data-view-reader"
 import type { Commander } from "$lib/keyboard/commander"
 import type { KeyboardMetadata } from "$lib/keyboard/metadata"
-import { HMK_Command, type HMK_AnalogInfo } from "."
+import { HMK_Command } from "."
+import { z } from "zod"
 
-const ANALOG_INFO_MAX_ENTRIES = 21
+export const hmkAnalogInfoSchema = z.object({
+  adcValue: z.number().int().min(0).max(65535),
+  distance: z.number().int().min(0).max(255),
+})
+
+export type HMK_AnalogInfo = z.infer<typeof hmkAnalogInfoSchema>
 
 export async function analogInfo(
   commander: Commander,
-  { numKeys }: KeyboardMetadata,
+  metadata: KeyboardMetadata,
 ): Promise<HMK_AnalogInfo[]> {
-  const ret = []
-  for (let i = 0; i < numKeys; i += ANALOG_INFO_MAX_ENTRIES) {
+  const numKeys = metadata.numKeys
+  const results: HMK_AnalogInfo[] = []
+
+  for (let offset = 0; offset < numKeys; offset += 21) {
     const reader = new DataViewReader(
       await commander.sendCommand({
         command: HMK_Command.ANALOG_INFO,
-        payload: [i],
+        payload: [offset],
       }),
     )
 
-    for (let j = 0; j < ANALOG_INFO_MAX_ENTRIES && i + j < numKeys; j++) {
-      ret.push({
-        adcValue: reader.uint16(),
-        distance: reader.uint8(),
-      })
+    // 21 items in each payload batch
+    const itemsToRead = Math.min(21, numKeys - offset)
+    for (let i = 0; i < itemsToRead; i++) {
+      const adcValue = reader.uint16()
+      const distance = reader.uint8()
+      results.push({ adcValue, distance })
     }
   }
 
-  return ret
+  console.log("analogInfo fetched results:", results.length)
+  return results
 }

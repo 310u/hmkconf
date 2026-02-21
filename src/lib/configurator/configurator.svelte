@@ -29,6 +29,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   const gamepadTab = import("./gamepad/gamepad-tab.svelte")
   const calibrationTab = import("./calibration/calibration-tab.svelte")
   const settingsTab = import("./settings/settings-tab.svelte")
+  const diagnosticsTab = import("./diagnostics/diagnostics-menu.svelte")
 
   // svelte-ignore state_referenced_locally
   keyboardContext.set(keyboard)
@@ -76,6 +77,13 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     <Tabs.Content value="calibration">
       {#snippet child({ props })}
         <CalibrationTab {...props} />
+      {/snippet}
+    </Tabs.Content>
+  {/await}
+  {#await diagnosticsTab then { default: DiagnosticsTab }}
+    <Tabs.Content value="diagnostics">
+      {#snippet child({ props })}
+        <DiagnosticsTab {...props} />
       {/snippet}
     </Tabs.Content>
   {/await}

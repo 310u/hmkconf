@@ -43,6 +43,7 @@ export const hmkOptionsSchema = z.object({
   xInputEnabled: z.boolean(),
   saveBottomOutThreshold: z.boolean(),
   highPollingRateEnabled: z.boolean(),
+  continuousCalibration: z.boolean(),
 })
 
 export type HMK_Options = z.infer<typeof hmkOptionsSchema>

@@ -89,6 +89,25 @@ this program. If not, see <https://www.gnu.org/licenses/>.
           </ToggleGroup.Item>
         </div>
       </div>
+      <div class="flex flex-col items-center text-center text-base">
+        <div class="text-muted-foreground">Double Tap</div>
+        <div class="p-0.5" style={unitToStyle()}>
+          <ToggleGroup.Item
+            oncontextmenu={(e) => {
+              e.preventDefault()
+              configMenuState.updateAction({
+                ...action,
+                doubleTapKeycode: Keycode.KC_NO,
+              })
+            }}
+            value="doubleTap"
+          >
+            {#snippet child({ props })}
+              <KeycodeButton keycode={action.doubleTapKeycode} {...props} />
+            {/snippet}
+          </ToggleGroup.Item>
+        </div>
+      </div>
     </ToggleGroup.Root>
   </div>
 </FixedScrollArea>

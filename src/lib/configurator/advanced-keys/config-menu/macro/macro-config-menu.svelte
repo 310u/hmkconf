@@ -210,7 +210,20 @@
 
           <Select.Root
             value={String(event.action)}
-            onValueChange={(v) => v && updateEvent(i, { action: Number(v) })}
+            onValueChange={(v) => {
+              if (v) {
+                const newAction = Number(v)
+                let newKeycode = event.keycode
+                // If switching to DELAY from a key action, reset the value to minimum valid bounds
+                if (newAction === HMK_MacroAction.DELAY && event.action !== HMK_MacroAction.DELAY) {
+                  newKeycode = 1
+                } else if (newAction !== HMK_MacroAction.DELAY && event.action === HMK_MacroAction.DELAY) {
+                   // If switching away from DELAY, reset to a valid Keycode
+                   newKeycode = Keycode.KC_A
+                }
+                updateEvent(i, { action: newAction, keycode: newKeycode })
+              }
+            }}
             type="single"
           >
             <Select.Trigger class="h-8 w-[100px]">
@@ -235,13 +248,17 @@
               <input
                 type="number"
                 class="h-8 w-16 rounded-md border bg-transparent px-2 text-right"
-                min="1"
-                max="255"
-                value={event.keycode}
-                onchange={(e) =>
+                min="10"
+                max="2550"
+                step="10"
+                value={event.keycode * 10}
+                onchange={(e) => {
+                  let val = Math.round((parseInt(e.currentTarget.value) || 10) / 10)
+                  val = Math.max(1, Math.min(255, val))
                   updateEvent(i, {
-                    keycode: parseInt(e.currentTarget.value) || 1,
-                  })}
+                    keycode: val,
+                  })
+                }}
               />
               <span class="text-muted-foreground">ms</span>
             </div>

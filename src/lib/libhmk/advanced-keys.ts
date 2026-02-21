@@ -96,6 +96,9 @@ export const hmkAKTapHoldSchema = z.object({
   holdWhileUndecided: z.boolean().default(false),
   quickTapMs: uint16Schema.default(0),
   requirePriorIdleMs: uint16Schema.default(0),
+  // If set, re-pressing within the double tap window emits this keycode
+  // (uses quickTapMs as window if set, otherwise tappingTerm with added latency)
+  doubleTapKeycode: uint8Schema.default(0),
 })
 
 export type HMK_AKTapHold = z.infer<typeof hmkAKTapHoldSchema>
@@ -128,6 +131,16 @@ export enum HMK_MacroAction {
 export const hmkMacroEventSchema = z.object({
   keycode: uint8Schema,
   action: z.nativeEnum(HMK_MacroAction),
+}).superRefine((val, ctx) => {
+  if (val.action === HMK_MacroAction.DELAY) {
+    if (val.keycode < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Delay must be at least 10ms (value 1)",
+        path: ["keycode"],
+      })
+    }
+  }
 })
 
 export type HMK_MacroEvent = z.infer<typeof hmkMacroEventSchema>

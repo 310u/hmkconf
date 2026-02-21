@@ -36,7 +36,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       ...action,
       ...(binding === "tap"
         ? { tapKeycode: keycode }
-        : { holdKeycode: keycode }),
+        : binding === "hold"
+          ? { holdKeycode: keycode }
+          : { doubleTapKeycode: keycode }),
     })
     tapHoldConfigMenuState.binding = ""
   }}

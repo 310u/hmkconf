@@ -7,11 +7,15 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "prepare": "svelte-kit sync || echo ''",
+    "package": "svelte-kit sync && svelte-package && publint",
+    "prepublishOnly": "npm run package",
+    "test": "vitest",
+    "test:unit": "vitest",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
-    "lint": "prettier --check . && eslint ."
+    "lint": "prettier --check . && eslint .",
+    "sync-types": "python ../libhmk/scripts/gen_ts_types.py ../libhmk/include/common.h ../libhmk/include/eeconfig.h src/lib/libhmk/generated/eeconfig.ts"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.0",
@@ -23,6 +27,8 @@
     "@sveltejs/kit": "^2.49.2",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@tailwindcss/vite": "^4.1.18",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
     "@types/w3c-web-hid": "^1.0.6",
     "bits-ui": "^2.14.4",
     "clsx": "^2.1.1",
@@ -31,6 +37,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-svelte": "^3.13.1",
     "globals": "^16.5.0",
+    "jsdom": "^28.1.0",
     "paneforge": "^1.0.2",
     "prettier": "^3.7.4",
     "prettier-plugin-svelte": "^3.4.1",
@@ -44,7 +51,8 @@
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.51.0",
-    "vite": "^7.3.0"
+    "vite": "^7.3.0",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",

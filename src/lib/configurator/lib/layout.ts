@@ -21,6 +21,7 @@ import {
   PencilIcon,
   SettingsIcon,
   SquareChevronUpIcon,
+  ActivityIcon,
 } from "@lucide/svelte"
 import type { Component } from "svelte"
 import type { ConfiguratorTabs } from "../context.svelte"
@@ -54,6 +55,7 @@ export const sidebarTabGroups: SidebarTabGroup[] = [
       },
       { label: "Gamepad", value: "gamepad", icon: Gamepad2Icon },
       { label: "Calibration", value: "calibration", icon: CrosshairIcon },
+      { label: "Diagnostics", value: "diagnostics", icon: ActivityIcon },
     ],
   },
   {
