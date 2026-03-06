@@ -186,6 +186,13 @@ export const specialKeycodeMetadata: KeycodeMetadata[] = [
     webCodes: [],
     category: "Special",
   },
+  {
+    name: "Joystick\nMode",
+    tooltip: "Cycle through Joystick Modes (Mouse, XInput, Scroll, etc.)",
+    keycode: Keycode.SP_JOY_MODE_NEXT,
+    webCodes: [],
+    category: "Special",
+  },
 ]
 
 export function getSpecialKeycodes(numLayers: number) {
@@ -209,6 +216,7 @@ export function getSpecialKeycodes(numLayers: number) {
     Keycode.SP_KEY_LOCK,
     ...[...Array(numLayers)].map((_, i) => MO(i)),
     Keycode.SP_LAYER_LOCK,
+    Keycode.SP_JOY_MODE_NEXT,
     Keycode.SP_BOOT,
   ]
 }

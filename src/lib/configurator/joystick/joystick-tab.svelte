@@ -66,6 +66,7 @@
     { value: "1", label: "Mouse" },
     { value: "2", label: "XInput Left Stick" },
     { value: "3", label: "XInput Right Stick" },
+    { value: "4", label: "Scroll" },
   ]
 
   // Calibration logic
@@ -176,7 +177,7 @@
     </div>
 
     <!-- Mode Specific Settings -->
-    {#if config.mode === 1}
+    {#if config.mode === 1 || config.mode === 4}
       <div class="flex flex-col gap-2">
         <div class="grid text-sm">
           <span class="font-medium">Mouse Speed: {config.mouseSpeed}</span>
