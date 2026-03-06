@@ -40,9 +40,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 >
   {#snippet child({ props })}
     <KeyboardEditorKeyboard {...props}>
-      {#snippet keyGenerator(key)}
+      {#snippet keyGenerator(key, isJoystick)}
         {#if !gamepadButtons || !keymap}
-          <KeycodeButton.Skeleton />
+          <KeycodeButton.Skeleton class={isJoystick ? "rounded-full" : ""} />
         {:else}
           <ToggleGroup.Item
             oncontextmenu={(e) => {
@@ -61,6 +61,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
                   ? keymap[0][key]
                   : gamepadButtonToKeycode(gamepadButtons[key])}
                 showTooltip={gamepadButtons[key] !== HMK_GamepadButton.NONE}
+                class={isJoystick ? "rounded-full" : ""}
                 {...props}
               />
             {/snippet}

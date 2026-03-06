@@ -30,7 +30,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     ...props
   }: WithoutChildren<HTMLAttributes<HTMLDivElement>> & {
     displayLayout?: DisplayLayout
-    keyGenerator?: Snippet<[number]>
+    keyGenerator?: Snippet<[number, boolean]>
   } = $props()
 
   let containerWidth = $state(0)
@@ -57,9 +57,14 @@ this program. If not, see <https://www.gnu.org/licenses/>.
           class="relative"
           style={unitToStyle(displayLayout.width, displayLayout.height)}
         >
-          {#each displayLayout.displayKeys as { key, w, h, x, y }, i (i)}
-            <div class="absolute p-0.5" style={unitToStyle(w, h, x, y)}>
-              {@render keyGenerator?.(key)}
+          {#each displayLayout.displayKeys as { key, w, h, x, y, r, isJoystick }, i (i)}
+            <div
+              class="absolute p-0.5"
+              style="{unitToStyle(w, h, x, y)}{r
+                ? ` transform: rotate(${r}deg);`
+                : ''}"
+            >
+              {@render keyGenerator?.(key, isJoystick)}
             </div>
           {/each}
         </div>

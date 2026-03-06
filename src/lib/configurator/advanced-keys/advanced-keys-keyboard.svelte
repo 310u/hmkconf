@@ -81,9 +81,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 </script>
 
 <KeyboardEditorKeyboard>
-  {#snippet keyGenerator(key)}
+  {#snippet keyGenerator(key, isJoystick)}
     {#if disabled}
-      <KeycodeButton.Skeleton />
+      <KeycodeButton.Skeleton class={isJoystick ? "rounded-full" : ""} />
     {:else}
       <Toggle.Root
         bind:pressed={
@@ -115,7 +115,11 @@ this program. If not, see <https://www.gnu.org/licenses/>.
         }}
       >
         {#snippet child({ props })}
-          <KeycodeButton.Root keycode={advancedKeymap[layer][key]} {...props} />
+          <KeycodeButton.Root
+            keycode={advancedKeymap[layer][key]}
+            class={isJoystick ? "rounded-full" : ""}
+            {...props}
+          />
         {/snippet}
       </Toggle.Root>
     {/if}

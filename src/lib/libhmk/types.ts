@@ -285,3 +285,24 @@ export function parseEeconfig(reader: DataViewReader): Eeconfig {
   result.magicEnd = reader.uint32()
   return result
 }
+
+export interface CommandOutBuffer {
+  commandId: number
+  rgbConfigData?: number[]
+}
+
+export function parseCommandOutBuffer(reader: DataViewReader): CommandOutBuffer {
+  const commandId = reader.uint8()
+
+  // Read remaining 63 bytes into array
+  const rgbConfigData: number[] = []
+  for (let i = 0; i < 63; i++) {
+    if (reader.offset < reader.view.byteLength) {
+      rgbConfigData.push(reader.uint8())
+    } else {
+      break
+    }
+  }
+
+  return { commandId, rgbConfigData }
+}

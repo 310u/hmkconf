@@ -48,6 +48,14 @@ import { getKeymap, setKeymap } from "$lib/libhmk/commands/keymap"
 import { getMetadata } from "$lib/libhmk/commands/metadata"
 import { getMacros, setMacros } from "$lib/libhmk/commands/macros"
 import { getOptions, setOptions } from "$lib/libhmk/commands/options"
+import { getRgbConfig, setRgbConfig, type HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
+import {
+  getJoystickState,
+  getJoystickConfig,
+  setJoystickConfig,
+  type GetJoystickConfigParams,
+  type SetJoystickConfigParams,
+} from "$lib/libhmk/commands/joystick"
 import {
   duplicateProfile,
   getProfile,
@@ -200,6 +208,21 @@ class HMKKeyboard implements Keyboard {
   }
   async setMacros({ profile, offset, data }: SetMacrosParams) {
     return setMacros(this.commander, profile, data, offset)
+  }
+  async getRgbConfig(params: { profile: number }) {
+    return getRgbConfig(this.commander, { ...params, numKeys: this.metadata.numKeys })
+  }
+  async setRgbConfig(params: { profile: number; data: HMK_RgbConfig }) {
+    return setRgbConfig(this.commander, { ...params, numKeys: this.metadata.numKeys })
+  }
+  async getJoystickState() {
+    return getJoystickState(this.commander)
+  }
+  async getJoystickConfig(params: GetJoystickConfigParams) {
+    return getJoystickConfig(this.commander, params)
+  }
+  async setJoystickConfig(params: SetJoystickConfigParams) {
+    return setJoystickConfig(this.commander, params)
   }
 }
 

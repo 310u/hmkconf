@@ -17,7 +17,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import { KeyboardEditorKeyboard } from "$lib/components/keyboard-editor"
   import * as KeycodeButton from "$lib/components/keycode-button"
   import { Keycode } from "$lib/libhmk/keycodes"
-  import { numberNullable, stringNullable } from "$lib/utils"
+  import { cn, numberNullable, stringNullable } from "$lib/utils"
   import { ToggleGroup } from "bits-ui"
   import { remapStateContext } from "../context.svelte"
   import { keymapQueryContext } from "../queries/keymap-query.svelte"
@@ -37,7 +37,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 >
   {#snippet child({ props })}
     <KeyboardEditorKeyboard {...props}>
-      {#snippet keyGenerator(key)}
+      {#snippet keyGenerator(key, isJoystick)}
         {#if !keymap}
           <KeycodeButton.Skeleton />
         {:else}
@@ -52,6 +52,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
               <KeycodeButton.Root
                 keycode={keymap[layer][key]}
                 showTooltip
+                class={cn(isJoystick ? "rounded-full" : "")}
                 {...props}
               />
             {/snippet}

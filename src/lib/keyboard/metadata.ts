@@ -66,7 +66,9 @@ const keyboardLayoutSchema = z
           h: z.number().min(1).default(1),
           x: z.number().default(0),
           y: z.number().default(0),
+          r: z.number().default(0),
           option: z.tuple([z.int().min(0), z.int().min(0)]).optional(),
+          isJoystick: z.boolean().default(false),
         }),
       ),
     ),
@@ -104,6 +106,13 @@ export const keyboardMetadataSchema = z
     numLayers: z.int().min(1).max(HMK_MAX_NUM_LAYERS),
     numKeys: z.int().min(1).max(HMK_MAX_NUM_KEYS),
     numAdvancedKeys: z.int().min(1).max(HMK_MAX_NUM_ADVANCED_KEYS),
+
+    features: z
+      .object({
+        rgb: z.boolean().default(false),
+        joystick: z.boolean().default(false),
+      })
+      .default({ rgb: false, joystick: false }),
 
     layout: keyboardLayoutSchema,
     defaultKeymap: z.array(z.array(keycodeSchema)).optional(),
@@ -164,22 +173,27 @@ export const keyboardMetadataSchema = z
 export type KeyboardMetadata = z.infer<typeof keyboardMetadataSchema>
 
 export const demoMetadata = keyboardMetadataSchema.parse({
-  name: "Mochiko39HE",
+  name: "Mochiko40HE",
   vendorId: "0x0108",
-  productId: "0x0110",
+  productId: "0x0111",
   usbHighSpeed: true,
 
   adcResolution: 12,
   numProfiles: 4,
   numLayers: 4,
-  numKeys: 39,
+  numKeys: 41,
   numAdvancedKeys: 32,
 
+  features: {
+    rgb: true,
+    joystick: true,
+  },
+
   layout: {
-    labels: [
+    "labels": [
       "default"
     ],
-    keymap: [
+    "keymap": [
       [
         {
           "key": 0
@@ -197,8 +211,7 @@ export const demoMetadata = keyboardMetadataSchema.parse({
           "key": 4
         },
         {
-          "key": 5,
-          "x": 1.5
+          "key": 5
         },
         {
           "key": 6
@@ -230,12 +243,10 @@ export const demoMetadata = keyboardMetadataSchema.parse({
           "key": 14
         },
         {
-          "key": 15,
-          "x": 0.25
+          "key": 15
         },
         {
-          "key": 16,
-          "x": 0.25
+          "key": 16
         },
         {
           "key": 17
@@ -245,12 +256,12 @@ export const demoMetadata = keyboardMetadataSchema.parse({
         },
         {
           "key": 19
-        },
-        {
-          "key": 20
         }
       ],
       [
+        {
+          "key": 20
+        },
         {
           "key": 21
         },
@@ -267,8 +278,7 @@ export const demoMetadata = keyboardMetadataSchema.parse({
           "key": 25
         },
         {
-          "key": 26,
-          "x": 1.5
+          "key": 26
         },
         {
           "key": 27
@@ -278,23 +288,20 @@ export const demoMetadata = keyboardMetadataSchema.parse({
         },
         {
           "key": 29
-        },
-        {
-          "key": 30
         }
       ],
       [
         {
-          "key": 31,
-          "w": 1.25
+          "key": 30
         },
         {
-          "key": 32,
-          "w": 1.25
+          "key": 31
         },
         {
-          "key": 33,
-          "w": 2.25
+          "key": 32
+        },
+        {
+          "key": 33
         },
         {
           "key": 34
@@ -303,184 +310,27 @@ export const demoMetadata = keyboardMetadataSchema.parse({
           "key": 35
         },
         {
-          "key": 36,
-          "w": 2.25
+          "key": 36
         },
         {
-          "key": 37,
-          "w": 1.25
+          "key": 37
         },
         {
-          "key": 38,
-          "w": 1.25
+          "key": 38
+        },
+        {
+          "key": 39
+        }
+      ],
+      [
+        {
+          "key": 40,
+          "x": 4.5,
+          "y": 4.5,
+          "label": "STICK"
         }
       ]
     ]
   },
-  defaultKeymaps: [...Array(4)].map(() => [
-    [
-      "KC_Q",
-      "KC_W",
-      "KC_E",
-      "KC_R",
-      "KC_T",
-      "KC_Y",
-      "KC_U",
-      "KC_I",
-      "KC_O",
-      "KC_P",
-      "KC_A",
-      "KC_S",
-      "KC_D",
-      "KC_F",
-      "KC_G",
-      "KC_ESC",
-      "KC_H",
-      "KC_J",
-      "KC_K",
-      "KC_L",
-      "KC_ENT",
-      "KC_Z",
-      "KC_X",
-      "KC_C",
-      "KC_V",
-      "KC_B",
-      "KC_N",
-      "KC_M",
-      "KC_COMM",
-      "KC_DOT",
-      "KC_SLSH",
-      "KC_LGUI",
-      "KC_LALT",
-      "KC_SPC",
-      "MO(1)",
-      "MO(2)",
-      "KC_BSPC",
-      "KC_RALT",
-      "KC_RCTL"
-    ],
-    [
-      "KC_1",
-      "KC_2",
-      "KC_3",
-      "KC_4",
-      "KC_5",
-      "KC_6",
-      "KC_7",
-      "KC_8",
-      "KC_9",
-      "KC_0",
-      "KC_F1",
-      "KC_F2",
-      "KC_F3",
-      "KC_F4",
-      "KC_F5",
-      "_______",
-      "KC_F6",
-      "KC_F7",
-      "KC_F8",
-      "KC_F9",
-      "KC_QUOT",
-      "KC_LSFT",
-      "KC_MINS",
-      "KC_EQL",
-      "KC_BSLS",
-      "KC_GRV",
-      "KC_CAPS",
-      "KC_F10",
-      "KC_F11",
-      "KC_F12",
-      "KC_RSFT",
-      "KC_LGUI",
-      "KC_LALT",
-      "KC_SPC",
-      "KC_TAB",
-      "MO(2)",
-      "KC_BSPC",
-      "KC_RALT",
-      "KC_RCTL"
-    ],
-    [
-      "KC_VOLD",
-      "KC_HOME",
-      "KC_UP",
-      "KC_PGUP",
-      "KC_VOLU",
-      "KC_P7",
-      "KC_P8",
-      "KC_P9",
-      "KC_PSLS",
-      "KC_PAST",
-      "_______",
-      "KC_LEFT",
-      "KC_DOWN",
-      "KC_RIGHT",
-      "KC_MUTE",
-      "_______",
-      "KC_P4",
-      "KC_P5",
-      "KC_P6",
-      "KC_PMNS",
-      "KC_PPLS",
-      "_______",
-      "KC_END",
-      "KC_INS",
-      "KC_PGDN",
-      "KC_P0",
-      "KC_P1",
-      "KC_P2",
-      "KC_P3",
-      "KC_PDOT",
-      "KC_EQL",
-      "KC_LGUI",
-      "KC_LALT",
-      "KC_SPC",
-      "MO(1)",
-      "MO(2)",
-      "KC_BSPC",
-      "KC_RALT",
-      "KC_RCTL"
-    ],
-    [
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______",
-      "_______"
-    ]
-  ]),
+  defaultKeymaps: [...Array(4)].map(() => [...Array(4)].map(() => Array(41).fill("KC_NO"))),
 })

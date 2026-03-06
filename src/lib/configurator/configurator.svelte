@@ -30,6 +30,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   const calibrationTab = import("./calibration/calibration-tab.svelte")
   const settingsTab = import("./settings/settings-tab.svelte")
   const diagnosticsTab = import("./diagnostics/diagnostics-menu.svelte")
+  const rgbTab = import("./rgb/rgb-tab.svelte")
+  const joystickTab = import("./joystick/joystick-tab.svelte")
 
   // svelte-ignore state_referenced_locally
   keyboardContext.set(keyboard)
@@ -80,6 +82,24 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       {/snippet}
     </Tabs.Content>
   {/await}
+  {#if keyboard.metadata.features.rgb}
+    {#await rgbTab then { default: RgbTab }}
+      <Tabs.Content value="rgb">
+        {#snippet child({ props })}
+          <RgbTab {...props} />
+        {/snippet}
+      </Tabs.Content>
+    {/await}
+  {/if}
+  {#if keyboard.metadata.features.joystick}
+    {#await joystickTab then { default: JoystickTab }}
+      <Tabs.Content value="joystick">
+        {#snippet child({ props })}
+          <JoystickTab {...props} />
+        {/snippet}
+      </Tabs.Content>
+    {/await}
+  {/if}
   {#await diagnosticsTab then { default: DiagnosticsTab }}
     <Tabs.Content value="diagnostics">
       {#snippet child({ props })}

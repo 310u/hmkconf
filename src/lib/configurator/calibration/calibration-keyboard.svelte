@@ -25,11 +25,11 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 </script>
 
 <KeyboardEditorKeyboard>
-  {#snippet keyGenerator(key)}
+  {#snippet keyGenerator(key, isJoystick)}
     {#if !analogInfo}
-      <KeyButton.Skeleton />
+      <KeyButton.Skeleton class={isJoystick ? "rounded-full" : ""} />
     {:else}
-      <KeyButton.Root>
+      <KeyButton.Root class={isJoystick ? "rounded-full" : ""}>
         <span>{analogInfo[key].adcValue}</span>
         <span>{displayDistance(analogInfo[key].distance)}</span>
       </KeyButton.Root>

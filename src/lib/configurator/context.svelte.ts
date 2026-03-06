@@ -136,6 +136,8 @@ export type ConfiguratorTabs =
   | "advanced-keys"
   | "gamepad"
   | "calibration"
+  | "rgb"
+  | "joystick"
   | "diagnostics"
   | "settings"
 
@@ -217,6 +219,8 @@ export type DisplayLayoutKey = {
   h: number
   x: number
   y: number
+  r: number
+  isJoystick: boolean
 }
 
 function getKeyCoordinates({ keymap }: KeyboardLayout) {
@@ -276,7 +280,7 @@ export class DisplayLayout {
     this.width = width
     this.height = height
     this.displayKeys = $derived.by(() =>
-      keys.reduce((acc, { key, w, h, option }, i) => {
+      keys.reduce((acc, { key, w, h, x: srcX, y: srcY, r, option, isJoystick }, i) => {
         let [x, y] = coordinates[i]
         if (option !== undefined) {
           const [k, v] = option
@@ -287,7 +291,7 @@ export class DisplayLayout {
             y += optionAnchors[k][0][1] - optionAnchors[k][v][1]
           }
         }
-        acc.push({ key, w, h, x, y })
+        acc.push({ key, w, h, x, y, r, isJoystick })
         return acc
       }, [] as DisplayLayoutKey[]),
     )

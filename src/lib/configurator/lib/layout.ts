@@ -22,9 +22,11 @@ import {
   SettingsIcon,
   SquareChevronUpIcon,
   ActivityIcon,
+  PaletteIcon,
 } from "@lucide/svelte"
 import type { Component } from "svelte"
 import type { ConfiguratorTabs } from "../context.svelte"
+import type { KeyboardMetadata } from "$lib/keyboard/metadata"
 
 export const MIN_WINDOW_WIDTH = 1024
 export const MIN_WINDOW_HEIGHT = 768
@@ -38,28 +40,55 @@ export type SidebarTabGroup = {
   }[]
 }
 
-export const sidebarTabGroups: SidebarTabGroup[] = [
-  {
-    group: "Profiles",
-    tabs: [{ label: "Profiles", value: "profiles", icon: Grid2X2Icon }],
-  },
-  {
-    group: "Keyboard Configuration",
-    tabs: [
-      { label: "Remap", value: "remap", icon: PencilIcon },
-      { label: "Performance", value: "performance", icon: GaugeIcon },
-      {
-        label: "Advanced Keys",
-        value: "advanced-keys",
-        icon: SquareChevronUpIcon,
-      },
-      { label: "Gamepad", value: "gamepad", icon: Gamepad2Icon },
-      { label: "Calibration", value: "calibration", icon: CrosshairIcon },
-      { label: "Diagnostics", value: "diagnostics", icon: ActivityIcon },
-    ],
-  },
-  {
-    group: "Settings",
-    tabs: [{ label: "Settings", value: "settings", icon: SettingsIcon }],
-  },
-]
+export function getSidebarTabGroups(
+  metadata: KeyboardMetadata,
+): SidebarTabGroup[] {
+  const keyboardTabs: SidebarTabGroup["tabs"] = [
+    { label: "Remap", value: "remap", icon: PencilIcon },
+    { label: "Performance", value: "performance", icon: GaugeIcon },
+    {
+      label: "Advanced Keys",
+      value: "advanced-keys",
+      icon: SquareChevronUpIcon,
+    },
+    { label: "Gamepad", value: "gamepad", icon: Gamepad2Icon },
+    { label: "Calibration", value: "calibration", icon: CrosshairIcon },
+  ]
+
+  if (metadata.features.rgb) {
+    keyboardTabs.push({
+      label: "RGB Lighting",
+      value: "rgb",
+      icon: PaletteIcon,
+    })
+  }
+
+  if (metadata.features.joystick) {
+    keyboardTabs.push({
+      label: "Joystick",
+      value: "joystick",
+      icon: CrosshairIcon, // Reusing CrosshairIcon for Joystick. Or Gamepad2Icon.
+    })
+  }
+
+  keyboardTabs.push({
+    label: "Diagnostics",
+    value: "diagnostics",
+    icon: ActivityIcon,
+  })
+
+  return [
+    {
+      group: "Profiles",
+      tabs: [{ label: "Profiles", value: "profiles", icon: Grid2X2Icon }],
+    },
+    {
+      group: "Keyboard Configuration",
+      tabs: keyboardTabs,
+    },
+    {
+      group: "Settings",
+      tabs: [{ label: "Settings", value: "settings", icon: SettingsIcon }],
+    },
+  ]
+}

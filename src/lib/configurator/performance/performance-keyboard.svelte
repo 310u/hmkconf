@@ -49,9 +49,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       {...props}
     >
       <KeyboardEditorKeyboard {...props}>
-        {#snippet keyGenerator(key)}
+        {#snippet keyGenerator(key, isJoystick)}
           {#if !keymap || !actuationMap}
-            <KeycodeButton.Skeleton />
+            <KeycodeButton.Skeleton class={isJoystick ? "rounded-full" : ""} />
           {:else}
             <ToggleGroup.Item
               data-selectable
@@ -70,10 +70,15 @@ this program. If not, see <https://www.gnu.org/licenses/>.
             >
               {#snippet child({ props })}
                 {#if showKeymap}
-                  <KeycodeButton.Root keycode={keymap[0][key]} {...props} />
+                  <KeycodeButton.Root
+                    keycode={keymap[0][key]}
+                    class={isJoystick ? "rounded-full" : ""}
+                    {...props}
+                  />
                 {:else}
                   <PerformanceKeyButton
                     actuation={actuationMap[key]}
+                    class={isJoystick ? "rounded-full" : ""}
                     {...props}
                   />
                 {/if}

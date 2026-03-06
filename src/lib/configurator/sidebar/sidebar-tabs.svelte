@@ -15,11 +15,14 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar"
+  import { keyboardContext } from "$lib/keyboard"
   import { Tabs } from "bits-ui"
   import { globalStateContext } from "../context.svelte"
-  import { sidebarTabGroups } from "../lib/layout"
+  import { getSidebarTabGroups } from "../lib/layout"
 
   const { tab } = $derived(globalStateContext.get())
+  const { metadata } = keyboardContext.get()
+  const sidebarTabGroups = getSidebarTabGroups(metadata)
 </script>
 
 {#each sidebarTabGroups as { group, tabs } (group)}

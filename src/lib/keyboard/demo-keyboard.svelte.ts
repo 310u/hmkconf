@@ -24,6 +24,13 @@ import {
   NUM_MACROS,
 } from "$lib/libhmk/advanced-keys"
 import { HMK_GamepadButton, type HMK_GamepadOptions } from "$lib/libhmk/gamepad"
+import type { HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
+import type {
+  HMK_JoystickState,
+  HMK_JoystickConfig,
+  GetJoystickConfigParams,
+  SetJoystickConfigParams,
+} from "$lib/libhmk/commands/joystick"
 import type {
   DuplicateProfileParams,
   GetActuationMapParams,
@@ -58,6 +65,7 @@ type DemoKeyboardProfileState = {
   gamepadButtons: number[]
   gamepadOptions: HMK_GamepadOptions
   tickRate: number
+  rgbConfig: HMK_RgbConfig
 }
 
 function defaultProfile(profile: number): DemoKeyboardProfileState {
@@ -75,6 +83,14 @@ function defaultProfile(profile: number): DemoKeyboardProfileState {
       snappyJoystick: true,
     },
     tickRate: DEFAULT_TICK_RATE,
+    rgbConfig: {
+      enabled: 1,
+      globalBrightness: 255,
+      currentEffect: 1,
+      solidColor: { r: 255, g: 0, b: 0 },
+      effectSpeed: 128,
+      perKeyColors: Array(numKeys).fill({ r: 255, g: 0, b: 0 }),
+    },
   }
 }
 
@@ -187,5 +203,27 @@ export class DemoKeyboard implements Keyboard {
     for (let i = 0; i < data.length; i++) {
       this.#state.profiles[profile].macros[offset + i] = data[i]
     }
+  }
+  async getRgbConfig({ profile }: { profile: number }) {
+    return this.#state.profiles[profile].rgbConfig
+  }
+  async setRgbConfig({ profile, data }: { profile: number; data: HMK_RgbConfig }) {
+    this.#state.profiles[profile].rgbConfig = data
+  }
+  async getJoystickState(): Promise<HMK_JoystickState> {
+    return { rawX: 2048, rawY: 2048, outX: 0, outY: 0, sw: false }
+  }
+  async getJoystickConfig({ profile }: GetJoystickConfigParams): Promise<HMK_JoystickConfig> {
+    // Return dummy defaults
+    return {
+      x: { min: 0, center: 2048, max: 4095 },
+      y: { min: 0, center: 2048, max: 4095 },
+      deadzone: 150,
+      mode: 0,
+      mouseSpeed: 10,
+    }
+  }
+  async setJoystickConfig({ profile, config }: SetJoystickConfigParams): Promise<void> {
+    // No-op for demo
   }
 }
