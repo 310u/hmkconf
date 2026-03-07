@@ -29,10 +29,10 @@ import {
 } from "./calibration.query.svelte"
 import { GamepadQuery, gamepadQueryContext } from "./gamepad-query.svelte"
 import { KeymapQuery, keymapQueryContext } from "./keymap-query.svelte"
+import { MacrosQuery, macrosQueryContext } from "./macros-query.svelte"
 import { OptionsQuery, optionsQueryContext } from "./options-query.svelte"
 import { ProfileQuery, profileQueryContext } from "./profile-query.svelte"
 import { TickRateQuery, tickRateQueryContext } from "./tick-rate-query.svelte"
-import { MacrosQuery, macrosQueryContext } from "./macros-query.svelte"
 
 export async function optimisticUpdate<T>(options: {
   resource: ResourceReturn<T>

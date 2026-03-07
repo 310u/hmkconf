@@ -25,9 +25,9 @@ import { advancedKeysQueryContext } from "./advanced-keys-query.svelte"
 import { calibrationQueryContext } from "./calibration.query.svelte"
 import { gamepadQueryContext } from "./gamepad-query.svelte"
 import { keymapQueryContext } from "./keymap-query.svelte"
+import { macrosQueryContext } from "./macros-query.svelte"
 import { optionsQueryContext } from "./options-query.svelte"
 import { tickRateQueryContext } from "./tick-rate-query.svelte"
-import { macrosQueryContext } from "./macros-query.svelte"
 
 const PROFILE_REFETCH_INTERVAL = 1000
 
@@ -48,7 +48,7 @@ export class ProfileQuery {
 
   constructor() {
     this.profile = resource(
-      () => { },
+      () => {},
       async () => {
         const ret = await this.#keyboard.getProfile()
         setTimeout(() => this.profile.refetch(), PROFILE_REFETCH_INTERVAL)

@@ -17,14 +17,17 @@ import type { HMK_Calibration, HMK_Options } from "$lib/libhmk"
 import type { HMK_Actuation } from "$lib/libhmk/actuation"
 import type { HMK_AdvancedKey, HMK_Macro } from "$lib/libhmk/advanced-keys"
 import type { HMK_AnalogInfo } from "$lib/libhmk/commands"
-import type { HMK_GamepadOptions } from "$lib/libhmk/gamepad"
-import type { HMK_RgbConfig, SetRgbConfigParams } from "$lib/libhmk/commands/rgb"
 import type {
-  HMK_JoystickState,
-  HMK_JoystickConfig,
   GetJoystickConfigParams,
+  HMK_JoystickConfig,
+  HMK_JoystickState,
   SetJoystickConfigParams,
 } from "$lib/libhmk/commands/joystick"
+import type {
+  HMK_RgbConfig,
+  SetRgbConfigParams,
+} from "$lib/libhmk/commands/rgb"
+import type { HMK_GamepadOptions } from "$lib/libhmk/gamepad"
 import { Context } from "runed"
 import type { KeyboardMetadata } from "./metadata"
 
@@ -102,10 +105,12 @@ export type KeyboardAction = {
   getMacros(params: GetMacrosParams): Promise<HMK_Macro[]>
   setMacros(params: SetMacrosParams): Promise<void>
   getRgbConfig?(params: { profile: number }): Promise<HMK_RgbConfig>
-  setRgbConfig?(params: { profile: number, data: HMK_RgbConfig }): Promise<void>
+  setRgbConfig?(params: { profile: number; data: HMK_RgbConfig }): Promise<void>
 
   getJoystickState?(): Promise<HMK_JoystickState>
-  getJoystickConfig?(params: GetJoystickConfigParams): Promise<HMK_JoystickConfig>
+  getJoystickConfig?(
+    params: GetJoystickConfigParams,
+  ): Promise<HMK_JoystickConfig>
   setJoystickConfig?(params: SetJoystickConfigParams): Promise<void>
 }
 

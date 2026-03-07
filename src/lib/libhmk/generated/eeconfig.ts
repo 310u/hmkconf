@@ -4,9 +4,9 @@ import { DataViewReader } from "$lib/data-view-reader"
 
 export const MAX_MACRO_EVENTS = 16
 export const NUM_MACROS = 16
-export const EECONFIG_MAGIC_START = 0x0A42494C
-export const EECONFIG_MAGIC_END = 0x0A4B4D48
-export const EECONFIG_VERSION = 0x0105
+export const EECONFIG_MAGIC_START = 0x0b42494c
+export const EECONFIG_MAGIC_END = 0x0b4b4d48
+export const EECONFIG_VERSION = 0x010c
 export const NUM_KEYS = 64
 export const NUM_LAYERS = 4
 export const NUM_PROFILES = 4
@@ -38,6 +38,7 @@ export interface TapHold {
   flags: number
   quickTapMs: number
   requirePriorIdleMs: number
+  doubleTapKeycode: number
 }
 
 export interface Toggle {
@@ -94,11 +95,15 @@ export interface EeconfigCalibration {
 }
 
 export interface EeconfigOptions {
-  xinputEnabled: boolean
-  saveBottomOutThreshold: boolean
-  highPollingRateEnabled: boolean
-  continuousCalibration: boolean
+  xinputEnabled: number
+  Unused0: number
+  highPollingRateEnabled: number
+  continuousCalibration: number
+  sniperModeMultiplier: number
   reserved: number
+  sliderMode: number
+  sliderAction: number
+  Reserved32: number
   raw: number
 }
 
@@ -110,6 +115,8 @@ export interface EeconfigProfile {
   gamepadOptions: GamepadOptions
   tickRate: number
   macros: Macro[]
+  rgbConfig: RgbConfig
+  joystickConfig: JoystickConfig
 }
 
 export interface Eeconfig {
@@ -145,7 +152,9 @@ export function parseNullBind(reader: DataViewReader): NullBind {
   return result
 }
 
-export function parseDynamicKeystroke(reader: DataViewReader): DynamicKeystroke {
+export function parseDynamicKeystroke(
+  reader: DataViewReader,
+): DynamicKeystroke {
   const result = {} as any
   result.keycodes = Array.from({ length: 4 }, () => reader.uint8())
   result.bitmap = Array.from({ length: 4 }, () => reader.uint8())
@@ -161,6 +170,7 @@ export function parseTapHold(reader: DataViewReader): TapHold {
   result.flags = reader.uint8()
   result.quickTapMs = reader.uint16()
   result.requirePriorIdleMs = reader.uint16()
+  result.doubleTapKeycode = reader.uint8()
   return result
 }
 
@@ -202,36 +212,37 @@ export function parseAdvancedKey(reader: DataViewReader): AdvancedKey {
   const layer = reader.uint8()
   const key = reader.uint8()
   const type = reader.uint8()
-  // Data for advanced key is 9 bytes max. Note: if reading union, we must skip remaining bytes so we always consume ADVANCED_KEY_SIZE (12 bytes)
+  // Data for advanced key is 10 bytes max (tap_hold_t = 10 bytes with double_tap_keycode).
+  // Note: if reading union, we must skip remaining bytes so we always consume ADVANCED_KEY_SIZE (13 bytes)
   const result: any = { layer, key, type }
 
   switch (type) {
     case 1: // AK_TYPE_NULL_BIND
       result.nullBind = parseNullBind(reader)
-      reader.offset += 6 // skip remaining bytes (12 - 3 header - 3 struct)
+      reader.offset += 7 // skip remaining bytes (13 - 3 header - 3 struct = 7)
       break
     case 2: // AK_TYPE_DYNAMIC_KEYSTROKE
       result.dynamicKeystroke = parseDynamicKeystroke(reader)
-      // 12 - 3 - 9 = 0 skips
+      reader.offset += 1 // 13 - 3 - 9 = 1 skip
       break
     case 3: // AK_TYPE_TAP_HOLD
       result.tapHold = parseTapHold(reader)
-      reader.offset += 1 // 12 - 3 - 8 = 1 skip
+      // 13 - 3 - 10 = 0 skips
       break
     case 4: // AK_TYPE_TOGGLE
       result.toggle = parseToggle(reader)
-      reader.offset += 6 // 12 - 3 - 3 = 6 skips
+      reader.offset += 7 // 13 - 3 - 3 = 7 skips
       break
     case 5: // AK_TYPE_COMBO
       result.combo = parseCombo(reader)
-      reader.offset += 2 // 12 - 3 - 7 = 2 skips
+      reader.offset += 3 // 13 - 3 - 7 = 3 skips
       break
     case 6: // AK_TYPE_MACRO
       result.macroKey = parseMacroKey(reader)
-      reader.offset += 8 // 12 - 3 - 1 = 8 skips
+      reader.offset += 9 // 13 - 3 - 1 = 9 skips
       break
     default:
-      reader.offset += 9 // exhaust empty action bytes
+      reader.offset += 10 // exhaust empty action bytes
       break
   }
   return result as AdvancedKey
@@ -243,7 +254,9 @@ export function parseGamepadOptions(reader: DataViewReader): GamepadOptions {
   return { options } as any
 }
 
-export function parseEeconfigCalibration(reader: DataViewReader): EeconfigCalibration {
+export function parseEeconfigCalibration(
+  reader: DataViewReader,
+): EeconfigCalibration {
   const result = {} as any
   result.initialRestValue = reader.uint16()
   result.initialBottomOutThreshold = reader.uint16()
@@ -253,19 +266,25 @@ export function parseEeconfigCalibration(reader: DataViewReader): EeconfigCalibr
 export function parseEeconfigOptions(reader: DataViewReader): EeconfigOptions {
   // For exact union parsing, we either backtrack or manually read flags.
   // Gamepad options overlay uint8_t raw flags. We will just read a byte since we only have options mapping for Gamepad options.
-  const raw = reader.uint16()
+  const raw = reader.uint32()
   return { raw } as any
 }
 
 export function parseEeconfigProfile(reader: DataViewReader): EeconfigProfile {
   const result = {} as any
-  result.keymap = Array.from({ length: 4 }, () => Array.from({ length: 64 }, () => reader.uint8()))
+  result.keymap = Array.from({ length: 4 }, () =>
+    Array.from({ length: 64 }, () => reader.uint8()),
+  )
   result.actuationMap = Array.from({ length: 64 }, () => parseActuation(reader))
-  result.advancedKeys = Array.from({ length: 32 }, () => parseAdvancedKey(reader))
+  result.advancedKeys = Array.from({ length: 32 }, () =>
+    parseAdvancedKey(reader),
+  )
   result.gamepadButtons = Array.from({ length: 64 }, () => reader.uint8())
   result.gamepadOptions = parseGamepadOptions(reader)
   result.tickRate = reader.uint8()
   result.macros = Array.from({ length: 16 }, () => parseMacro(reader))
+  result.rgbConfig = parseRgbConfig(reader)
+  result.joystickConfig = parseJoystickConfig(reader)
   return result
 }
 
@@ -278,7 +297,9 @@ export function parseEeconfig(reader: DataViewReader): Eeconfig {
   result.options = parseEeconfigOptions(reader)
   result.currentProfile = reader.uint8()
   result.lastNonDefaultProfile = reader.uint8()
-  result.profiles = Array.from({ length: 4 }, () => parseEeconfigProfile(reader))
+  result.profiles = Array.from({ length: 4 }, () =>
+    parseEeconfigProfile(reader),
+  )
   result.magicEnd = reader.uint32()
   return result
 }

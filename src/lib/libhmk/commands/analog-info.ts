@@ -16,8 +16,8 @@
 import { DataViewReader } from "$lib/data-view-reader"
 import type { Commander } from "$lib/keyboard/commander"
 import type { KeyboardMetadata } from "$lib/keyboard/metadata"
-import { HMK_Command } from "."
 import { z } from "zod"
+import { HMK_Command } from "."
 
 export const hmkAnalogInfoSchema = z.object({
   adcValue: z.number().int().min(0).max(65535),

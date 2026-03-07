@@ -215,11 +215,17 @@
                 const newAction = Number(v)
                 let newKeycode = event.keycode
                 // If switching to DELAY from a key action, reset the value to minimum valid bounds
-                if (newAction === HMK_MacroAction.DELAY && event.action !== HMK_MacroAction.DELAY) {
+                if (
+                  newAction === HMK_MacroAction.DELAY &&
+                  event.action !== HMK_MacroAction.DELAY
+                ) {
                   newKeycode = 1
-                } else if (newAction !== HMK_MacroAction.DELAY && event.action === HMK_MacroAction.DELAY) {
-                   // If switching away from DELAY, reset to a valid Keycode
-                   newKeycode = Keycode.KC_A
+                } else if (
+                  newAction !== HMK_MacroAction.DELAY &&
+                  event.action === HMK_MacroAction.DELAY
+                ) {
+                  // If switching away from DELAY, reset to a valid Keycode
+                  newKeycode = Keycode.KC_A
                 }
                 updateEvent(i, { action: newAction, keycode: newKeycode })
               }
@@ -253,7 +259,9 @@
                 step="10"
                 value={event.keycode * 10}
                 onchange={(e) => {
-                  let val = Math.round((parseInt(e.currentTarget.value) || 10) / 10)
+                  let val = Math.round(
+                    (parseInt(e.currentTarget.value) || 10) / 10,
+                  )
                   val = Math.max(1, Math.min(255, val))
                   updateEvent(i, {
                     keycode: val,

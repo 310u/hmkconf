@@ -44,24 +44,28 @@ import {
   getGamepadOptions,
   setGamepadOptions,
 } from "$lib/libhmk/commands/gamepad-options"
-import { getKeymap, setKeymap } from "$lib/libhmk/commands/keymap"
-import { getMetadata } from "$lib/libhmk/commands/metadata"
-import { getMacros, setMacros } from "$lib/libhmk/commands/macros"
-import { getOptions, setOptions } from "$lib/libhmk/commands/options"
-import { getRgbConfig, setRgbConfig, type HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
 import {
-  getJoystickState,
   getJoystickConfig,
+  getJoystickState,
   setJoystickConfig,
   type GetJoystickConfigParams,
   type SetJoystickConfigParams,
 } from "$lib/libhmk/commands/joystick"
+import { getKeymap, setKeymap } from "$lib/libhmk/commands/keymap"
+import { getMacros, setMacros } from "$lib/libhmk/commands/macros"
+import { getMetadata } from "$lib/libhmk/commands/metadata"
+import { getOptions, setOptions } from "$lib/libhmk/commands/options"
 import {
   duplicateProfile,
   getProfile,
   resetProfile,
 } from "$lib/libhmk/commands/profile"
 import { reboot } from "$lib/libhmk/commands/reboot"
+import {
+  getRgbConfig,
+  setRgbConfig,
+  type HMK_RgbConfig,
+} from "$lib/libhmk/commands/rgb"
 import { getSerial } from "$lib/libhmk/commands/serial"
 import { getTickRate, setTickRate } from "$lib/libhmk/commands/tick-rate"
 import { displayVersion, isWebHIDSSupported } from "$lib/utils"
@@ -210,10 +214,16 @@ class HMKKeyboard implements Keyboard {
     return setMacros(this.commander, profile, data, offset)
   }
   async getRgbConfig(params: { profile: number }) {
-    return getRgbConfig(this.commander, { ...params, numKeys: this.metadata.numKeys })
+    return getRgbConfig(this.commander, {
+      ...params,
+      numKeys: this.metadata.numKeys,
+    })
   }
   async setRgbConfig(params: { profile: number; data: HMK_RgbConfig }) {
-    return setRgbConfig(this.commander, { ...params, numKeys: this.metadata.numKeys })
+    return setRgbConfig(this.commander, {
+      ...params,
+      numKeys: this.metadata.numKeys,
+    })
   }
   async getJoystickState() {
     return getJoystickState(this.commander)

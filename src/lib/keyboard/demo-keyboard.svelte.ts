@@ -19,18 +19,18 @@ import { defaultActuation, type HMK_Actuation } from "$lib/libhmk/actuation"
 import {
   DEFAULT_TICK_RATE,
   defaultAdvancedKey,
+  NUM_MACROS,
   type HMK_AdvancedKey,
   type HMK_Macro,
-  NUM_MACROS,
 } from "$lib/libhmk/advanced-keys"
-import { HMK_GamepadButton, type HMK_GamepadOptions } from "$lib/libhmk/gamepad"
-import type { HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
 import type {
-  HMK_JoystickState,
-  HMK_JoystickConfig,
   GetJoystickConfigParams,
+  HMK_JoystickConfig,
+  HMK_JoystickState,
   SetJoystickConfigParams,
 } from "$lib/libhmk/commands/joystick"
+import type { HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
+import { HMK_GamepadButton, type HMK_GamepadOptions } from "$lib/libhmk/gamepad"
 import type {
   DuplicateProfileParams,
   GetActuationMapParams,
@@ -38,6 +38,7 @@ import type {
   GetGamepadButtonsParams,
   GetGamepadOptionsParams,
   GetKeymapParams,
+  GetMacrosParams,
   GetTickRateParams,
   Keyboard,
   ResetProfileParams,
@@ -45,10 +46,9 @@ import type {
   SetAdvancedKeysParams,
   SetCalibrationParams,
   SetGamepadButtonsParams,
-  GetMacrosParams,
-  SetMacrosParams,
   SetGamepadOptionsParams,
   SetKeymapParams,
+  SetMacrosParams,
   SetOptionsParams,
   SetTickRateParams,
 } from "."
@@ -117,13 +117,13 @@ export class DemoKeyboard implements Keyboard {
     ),
   }
 
-  async disconnect() { }
-  async forget() { }
+  async disconnect() {}
+  async forget() {}
 
-  async reboot() { }
-  async bootloader() { }
-  async factoryReset() { }
-  async recalibrate() { }
+  async reboot() {}
+  async bootloader() {}
+  async factoryReset() {}
+  async recalibrate() {}
   async analogInfo() {
     return Array(numKeys).fill({ adcValue: 0, distance: 0 })
   }
@@ -133,7 +133,7 @@ export class DemoKeyboard implements Keyboard {
       initialBottomOutThreshold: (1 << adcResolution) - 1,
     }
   }
-  async setCalibration() { }
+  async setCalibration() {}
   async getProfile() {
     return 0
   }
@@ -207,13 +207,21 @@ export class DemoKeyboard implements Keyboard {
   async getRgbConfig({ profile }: { profile: number }) {
     return this.#state.profiles[profile].rgbConfig
   }
-  async setRgbConfig({ profile, data }: { profile: number; data: HMK_RgbConfig }) {
+  async setRgbConfig({
+    profile,
+    data,
+  }: {
+    profile: number
+    data: HMK_RgbConfig
+  }) {
     this.#state.profiles[profile].rgbConfig = data
   }
   async getJoystickState(): Promise<HMK_JoystickState> {
     return { rawX: 2048, rawY: 2048, outX: 0, outY: 0, sw: false }
   }
-  async getJoystickConfig({ profile }: GetJoystickConfigParams): Promise<HMK_JoystickConfig> {
+  async getJoystickConfig({
+    profile,
+  }: GetJoystickConfigParams): Promise<HMK_JoystickConfig> {
     // Return dummy defaults
     return {
       x: { min: 0, center: 2048, max: 4095 },
@@ -223,7 +231,10 @@ export class DemoKeyboard implements Keyboard {
       mouseSpeed: 10,
     }
   }
-  async setJoystickConfig({ profile, config }: SetJoystickConfigParams): Promise<void> {
+  async setJoystickConfig({
+    profile,
+    config,
+  }: SetJoystickConfigParams): Promise<void> {
     // No-op for demo
   }
 }

@@ -14,19 +14,19 @@
  */
 
 import {
+  ActivityIcon,
   CrosshairIcon,
   Gamepad2Icon,
   GaugeIcon,
   Grid2X2Icon,
+  PaletteIcon,
   PencilIcon,
   SettingsIcon,
   SquareChevronUpIcon,
-  ActivityIcon,
-  PaletteIcon,
 } from "@lucide/svelte"
+import type { KeyboardMetadata } from "$lib/keyboard/metadata"
 import type { Component } from "svelte"
 import type { ConfiguratorTabs } from "../context.svelte"
-import type { KeyboardMetadata } from "$lib/keyboard/metadata"
 
 export const MIN_WINDOW_WIDTH = 1024
 export const MIN_WINDOW_HEIGHT = 768

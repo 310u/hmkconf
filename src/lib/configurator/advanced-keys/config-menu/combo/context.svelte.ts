@@ -22,9 +22,9 @@
 import { Context } from "runed"
 
 export class ComboConfigMenuState {
-    bindingSelected = $state(false)
+  bindingSelected = $state(false)
 }
 
 export const comboConfigMenuStateContext = new Context<ComboConfigMenuState>(
-    "ComboConfigMenuState",
+  "ComboConfigMenuState",
 )

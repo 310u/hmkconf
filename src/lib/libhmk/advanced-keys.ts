@@ -128,20 +128,22 @@ export enum HMK_MacroAction {
   DELAY,
 }
 
-export const hmkMacroEventSchema = z.object({
-  keycode: uint8Schema,
-  action: z.nativeEnum(HMK_MacroAction),
-}).superRefine((val, ctx) => {
-  if (val.action === HMK_MacroAction.DELAY) {
-    if (val.keycode < 1) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Delay must be at least 10ms (value 1)",
-        path: ["keycode"],
-      })
+export const hmkMacroEventSchema = z
+  .object({
+    keycode: uint8Schema,
+    action: z.nativeEnum(HMK_MacroAction),
+  })
+  .superRefine((val, ctx) => {
+    if (val.action === HMK_MacroAction.DELAY) {
+      if (val.keycode < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Delay must be at least 10ms (value 1)",
+          path: ["keycode"],
+        })
+      }
     }
-  }
-})
+  })
 
 export type HMK_MacroEvent = z.infer<typeof hmkMacroEventSchema>
 

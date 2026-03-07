@@ -280,20 +280,23 @@ export class DisplayLayout {
     this.width = width
     this.height = height
     this.displayKeys = $derived.by(() =>
-      keys.reduce((acc, { key, w, h, x: srcX, y: srcY, r, option, isJoystick }, i) => {
-        let [x, y] = coordinates[i]
-        if (option !== undefined) {
-          const [k, v] = option
-          if (v !== this.#layoutOptions[k]) {
-            return acc
-          } else {
-            x += optionAnchors[k][0][0] - optionAnchors[k][v][0]
-            y += optionAnchors[k][0][1] - optionAnchors[k][v][1]
+      keys.reduce(
+        (acc, { key, w, h, x: srcX, y: srcY, r, option, isJoystick }, i) => {
+          let [x, y] = coordinates[i]
+          if (option !== undefined) {
+            const [k, v] = option
+            if (v !== this.#layoutOptions[k]) {
+              return acc
+            } else {
+              x += optionAnchors[k][0][0] - optionAnchors[k][v][0]
+              y += optionAnchors[k][0][1] - optionAnchors[k][v][1]
+            }
           }
-        }
-        acc.push({ key, w, h, x, y, r, isJoystick })
-        return acc
-      }, [] as DisplayLayoutKey[]),
+          acc.push({ key, w, h, x, y, r, isJoystick })
+          return acc
+        },
+        [] as DisplayLayoutKey[],
+      ),
     )
   }
 }

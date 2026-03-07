@@ -4,8 +4,8 @@ import { DataViewReader } from "$lib/data-view-reader"
 
 export const MAX_MACRO_EVENTS = 16
 export const NUM_MACROS = 16
-export const EECONFIG_MAGIC_START = 0x0A42494C
-export const EECONFIG_MAGIC_END = 0x0A4B4D48
+export const EECONFIG_MAGIC_START = 0x0a42494c
+export const EECONFIG_MAGIC_END = 0x0a4b4d48
 export const EECONFIG_VERSION = 0x0107
 export const NUM_KEYS = 64
 export const NUM_LAYERS = 4
@@ -146,7 +146,9 @@ export function parseNullBind(reader: DataViewReader): NullBind {
   return result
 }
 
-export function parseDynamicKeystroke(reader: DataViewReader): DynamicKeystroke {
+export function parseDynamicKeystroke(
+  reader: DataViewReader,
+): DynamicKeystroke {
   const result = {} as any
   result.keycodes = Array.from({ length: 4 }, () => reader.uint8())
   result.bitmap = Array.from({ length: 4 }, () => reader.uint8())
@@ -246,7 +248,9 @@ export function parseGamepadOptions(reader: DataViewReader): GamepadOptions {
   return { options } as any
 }
 
-export function parseEeconfigCalibration(reader: DataViewReader): EeconfigCalibration {
+export function parseEeconfigCalibration(
+  reader: DataViewReader,
+): EeconfigCalibration {
   const result = {} as any
   result.initialRestValue = reader.uint16()
   result.initialBottomOutThreshold = reader.uint16()
@@ -262,9 +266,13 @@ export function parseEeconfigOptions(reader: DataViewReader): EeconfigOptions {
 
 export function parseEeconfigProfile(reader: DataViewReader): EeconfigProfile {
   const result = {} as any
-  result.keymap = Array.from({ length: 4 }, () => Array.from({ length: 64 }, () => reader.uint8()))
+  result.keymap = Array.from({ length: 4 }, () =>
+    Array.from({ length: 64 }, () => reader.uint8()),
+  )
   result.actuationMap = Array.from({ length: 64 }, () => parseActuation(reader))
-  result.advancedKeys = Array.from({ length: 32 }, () => parseAdvancedKey(reader))
+  result.advancedKeys = Array.from({ length: 32 }, () =>
+    parseAdvancedKey(reader),
+  )
   result.gamepadButtons = Array.from({ length: 64 }, () => reader.uint8())
   result.gamepadOptions = parseGamepadOptions(reader)
   result.tickRate = reader.uint8()
@@ -281,7 +289,9 @@ export function parseEeconfig(reader: DataViewReader): Eeconfig {
   result.options = parseEeconfigOptions(reader)
   result.currentProfile = reader.uint8()
   result.lastNonDefaultProfile = reader.uint8()
-  result.profiles = Array.from({ length: 4 }, () => parseEeconfigProfile(reader))
+  result.profiles = Array.from({ length: 4 }, () =>
+    parseEeconfigProfile(reader),
+  )
   result.magicEnd = reader.uint32()
   return result
 }
@@ -291,7 +301,9 @@ export interface CommandOutBuffer {
   rgbConfigData?: number[]
 }
 
-export function parseCommandOutBuffer(reader: DataViewReader): CommandOutBuffer {
+export function parseCommandOutBuffer(
+  reader: DataViewReader,
+): CommandOutBuffer {
   const commandId = reader.uint8()
 
   // Read remaining 63 bytes into array

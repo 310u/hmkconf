@@ -23,8 +23,8 @@ import {
   LayoutTemplateIcon,
   LinkIcon,
   MoveHorizontalIcon,
-  ToggleLeftIcon,
   ScrollTextIcon,
+  ToggleLeftIcon,
 } from "@lucide/svelte"
 import { displayUInt8 } from "$lib/integer"
 import {
@@ -90,8 +90,7 @@ export const advancedKeyMetadata: AdvancedKeyMetadata[] = [
     type: HMK_AKType.COMBO,
     icon: LinkIcon,
     title: "Combo",
-    description:
-      "Trigger an action by pressing multiple keys simultaneously.",
+    description: "Trigger an action by pressing multiple keys simultaneously.",
     numKeys: 4,
     keycodes: [Keycode.AK_COMBO],
   },
@@ -193,10 +192,15 @@ export function createAdvancedKey(options: {
         key: 255, // Not used for combos
         action: {
           type,
-          keys: [...keys, ...Array(4 - keys.length).fill(255)].slice(0, 4) as [number, number, number, number],
+          keys: [...keys, ...Array(4 - keys.length).fill(255)].slice(0, 4) as [
+            number,
+            number,
+            number,
+            number,
+          ],
           outputKeycode: Keycode.KC_NO,
           term: 50, // Default 50ms
-        }
+        },
       }
     case HMK_AKType.MACRO:
       return {

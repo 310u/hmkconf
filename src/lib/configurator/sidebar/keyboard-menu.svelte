@@ -17,19 +17,64 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import {
     CableIcon,
     ChevronsUpDownIcon,
+    DownloadIcon,
     KeyboardIcon,
     LogOutIcon,
+    UploadIcon,
   } from "@lucide/svelte"
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu"
   import * as Sidebar from "$lib/components/ui/sidebar"
   import { displayUInt16 } from "$lib/integer"
   import { keyboardContext } from "$lib/keyboard"
+  import { globalStateContext } from "../context.svelte"
+  import { KeyboardConfig } from "../lib/keyboard-config.svelte"
 
   const keyboard = keyboardContext.get()
   const {
     demo,
     metadata: { name, vendorId, productId },
   } = keyboard
+
+  const globalState = globalStateContext.get()
+  const config = new KeyboardConfig()
+
+  async function exportProfile() {
+    try {
+      const data = await config.getConfig(globalState.profile)
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${name.replace(/[^a-z0-9]/gi, "_")}_Profile${globalState.profile}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error("Failed to export profile:", err)
+    }
+  }
+
+  function triggerImport() {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = ".json"
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      try {
+        const text = await file.text()
+        const data = JSON.parse(text)
+        await config.setConfig(globalState.profile, data)
+      } catch (err) {
+        console.error("Failed to import profile:", err)
+        alert("Failed to import profile. Invalid file format.")
+      }
+    }
+    input.click()
+  }
 </script>
 
 <Sidebar.Menu>
@@ -62,6 +107,15 @@ this program. If not, see <https://www.gnu.org/licenses/>.
         align="start"
         class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg"
       >
+        <DropdownMenu.Item class="gap-2 p-2" onSelect={exportProfile}>
+          <DownloadIcon class="size-4" />
+          Export Profile
+        </DropdownMenu.Item>
+        <DropdownMenu.Item class="gap-2 p-2" onSelect={triggerImport}>
+          <UploadIcon class="size-4" />
+          Import Profile
+        </DropdownMenu.Item>
+        <DropdownMenu.Separator />
         {#if demo}
           <DropdownMenu.Item class="gap-2 p-2">
             {#snippet child({ props })}
