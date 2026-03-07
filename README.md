@@ -19,10 +19,12 @@ This configurator allows you to customize your Hall-effect keyboard's settings i
 - **Hardware Integrations (Fork additions)**:
 
   > [!WARNING]
-  > Hardware features like **Joystick Support** and **RGB Lighting** have been implemented in the firmware and web UI but are not yet fully tested on physical hardware.
+  > Hardware features like **Joystick Support**, **Slider Support**, and **RGB Lighting** have been implemented in the firmware and web UI but are not yet fully tested on physical hardware.
+  - **Analog RGB**: Select from 50+ animated, reactive, and static effects, including **Depth-Reactive** modes. Tweak speed, brightness, and set per-key colors.
   - **Joystick / Gamepad Mode**: Configure analog stick deadzones, calibration, mouse sensitivity, and XInput routing.
-  - **RGB Lighting**: Select from 50+ animated, reactive, and static effects, tweak speed/brightness, and set per-key colors.
+  - **Slider Configuration**: Map integrated sliders to volume control or gamepad axes with configurable sensitivity.
   - **Macros & Combos**: Fully graphical interface for recording and editing macro sequences and multi-key combos.
+
 
 - **EEPROM Storage**: Save calibrations and profiles directly to the keyboard's internal flash.
 
@@ -74,9 +76,10 @@ The compiled binaries will be located in the `src-tauri/target/release/bundle/` 
 
 ## Known Limitations
 
-- **Tauri Desktop App WebUSB Support**: Browsers embedded in Tauri (Webview2/WebKit) do not natively support the WebUSB API. Using the desktop app to connect to the keyboard may require running a local bridge server or implementing native Rust USB HID bindings (currently incomplete).
+- **Tauri Desktop App (Non-functional)**: The current desktop implementation using Tauri is **experimental and not yet working**. Native WebUSB support in Tauri's webview is limited, and the required bridge is still in development. Please use the Web version in a supported browser.
+- **Browser Support**: Safari and Firefox do not support WebUSB natively. You **must** use a Chromium-based browser (Chrome, Edge, Brave, etc.) to connect to your keyboard.
 - Background USB polling via WebUSB may occasionally fail or require a page refresh if the device is disconnected abruptly.
-- Safari and Firefox do not support WebUSB natively, so you must use the desktop app or a Chromium-based browser.
+
 
 ## Acknowledgements
 
