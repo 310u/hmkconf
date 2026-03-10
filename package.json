@@ -16,7 +16,10 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint .",
-    "sync-types": "python ../libhmk/scripts/gen_ts_types.py ../libhmk/include/common.h ../libhmk/include/eeconfig.h src/lib/libhmk/generated/eeconfig.ts"
+    "sync-types": "python ../libhmk/scripts/gen_ts_types.py ../libhmk/include/common.h ../libhmk/include/rgb.h ../libhmk/include/joystick.h ../libhmk/include/eeconfig.h src/lib/libhmk/generated/eeconfig.ts",
+    "gen-rgb-coords": "python ../libhmk/scripts/gen_rgb_coords.py ../libhmk/keyboards/mochiko40he",
+    "update-demo-metadata": "bun scripts/update_demo_metadata.js",
+    "sync-all": "bun run gen-rgb-coords && bun run update-demo-metadata && bun run sync-types"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.0",

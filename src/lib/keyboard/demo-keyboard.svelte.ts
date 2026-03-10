@@ -85,10 +85,15 @@ function defaultProfile(profile: number): DemoKeyboardProfileState {
     tickRate: DEFAULT_TICK_RATE,
     rgbConfig: {
       enabled: 1,
-      globalBrightness: 255,
+      globalBrightness: 51,
       currentEffect: 1,
       solidColor: { r: 255, g: 0, b: 0 },
+      secondaryColor: { r: 255, g: 255, b: 255 },
       effectSpeed: 128,
+      sleepTimeout: 0,
+      layerIndicatorMode: 0,
+      layerIndicatorKey: 0,
+      layerColors: Array(demoMetadata.numLayers).fill({ r: 0, g: 0, b: 0 }),
       perKeyColors: Array(numKeys).fill({ r: 255, g: 0, b: 0 }),
     },
   }
@@ -117,13 +122,13 @@ export class DemoKeyboard implements Keyboard {
     ),
   }
 
-  async disconnect() {}
-  async forget() {}
+  async disconnect() { }
+  async forget() { }
 
-  async reboot() {}
-  async bootloader() {}
-  async factoryReset() {}
-  async recalibrate() {}
+  async reboot() { }
+  async bootloader() { }
+  async factoryReset() { }
+  async recalibrate() { }
   async analogInfo() {
     return Array(numKeys).fill({ adcValue: 0, distance: 0 })
   }
@@ -133,7 +138,7 @@ export class DemoKeyboard implements Keyboard {
       initialBottomOutThreshold: (1 << adcResolution) - 1,
     }
   }
-  async setCalibration() {}
+  async setCalibration() { }
   async getProfile() {
     return 0
   }

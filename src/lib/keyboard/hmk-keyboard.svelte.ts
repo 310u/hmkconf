@@ -217,12 +217,14 @@ class HMKKeyboard implements Keyboard {
     return getRgbConfig(this.commander, {
       ...params,
       numKeys: this.metadata.numKeys,
+      numLayers: this.metadata.numLayers,
     })
   }
   async setRgbConfig(params: { profile: number; data: HMK_RgbConfig }) {
     return setRgbConfig(this.commander, {
       ...params,
       numKeys: this.metadata.numKeys,
+      numLayers: this.metadata.numLayers,
     })
   }
   async getJoystickState() {

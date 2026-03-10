@@ -4,9 +4,9 @@ import { DataViewReader } from "$lib/data-view-reader"
 
 export const MAX_MACRO_EVENTS = 16
 export const NUM_MACROS = 16
-export const EECONFIG_MAGIC_START = 0x0b42494c
-export const EECONFIG_MAGIC_END = 0x0b4b4d48
-export const EECONFIG_VERSION = 0x010c
+export const EECONFIG_MAGIC_START = 0x0B42494C
+export const EECONFIG_MAGIC_END = 0x0B4B4D48
+export const EECONFIG_VERSION = 0x010D
 export const NUM_KEYS = 64
 export const NUM_LAYERS = 4
 export const NUM_PROFILES = 4
@@ -89,6 +89,55 @@ export interface GamepadOptions {
   options?: number
 }
 
+export interface RgbColor {
+  r: number
+  g: number
+  b: number
+}
+
+export interface Hsv {
+  h: number
+  s: number
+  v: number
+}
+
+export interface RgbConfig {
+  enabled: number
+  globalBrightness: number
+  currentEffect: number
+  solidColor: RgbColor
+  secondaryColor: RgbColor
+  effectSpeed: number
+  sleepTimeout: number
+  layerIndicatorMode: number
+  layerIndicatorKey: number
+  layerColors: RgbColor[]
+  perKeyColors: RgbColor[]
+}
+
+export interface JoystickAxisCalibration {
+  min: number
+  center: number
+  max: number
+}
+
+export interface JoystickConfig {
+  x: JoystickAxisCalibration
+  y: JoystickAxisCalibration
+  deadzone: number
+  mode: number
+  mouseSpeed: number
+  reserved: number[]
+}
+
+export interface JoystickState {
+  rawX: number
+  rawY: number
+  outX: number
+  outY: number
+  sw: boolean
+}
+
 export interface EeconfigCalibration {
   initialRestValue: number
   initialBottomOutThreshold: number
@@ -135,6 +184,21 @@ export function parseBool(reader: DataViewReader): boolean {
   return reader.uint8() !== 0
 }
 
+export function parseInt8(reader: DataViewReader): number {
+  const v = reader.uint8()
+  return v >= 0x80 ? v - 0x100 : v
+}
+
+export function parseInt16(reader: DataViewReader): number {
+  const v = reader.uint16()
+  return v >= 0x8000 ? v - 0x10000 : v
+}
+
+export function parseInt32(reader: DataViewReader): number {
+  const v = reader.uint32()
+  return v >= 0x80000000 ? v - 0x100000000 : v
+}
+
 export function parseActuation(reader: DataViewReader): Actuation {
   const result = {} as any
   result.actuationPoint = reader.uint8()
@@ -152,9 +216,7 @@ export function parseNullBind(reader: DataViewReader): NullBind {
   return result
 }
 
-export function parseDynamicKeystroke(
-  reader: DataViewReader,
-): DynamicKeystroke {
+export function parseDynamicKeystroke(reader: DataViewReader): DynamicKeystroke {
   const result = {} as any
   result.keycodes = Array.from({ length: 4 }, () => reader.uint8())
   result.bitmap = Array.from({ length: 4 }, () => reader.uint8())
@@ -254,9 +316,68 @@ export function parseGamepadOptions(reader: DataViewReader): GamepadOptions {
   return { options } as any
 }
 
-export function parseEeconfigCalibration(
-  reader: DataViewReader,
-): EeconfigCalibration {
+export function parseRgbColor(reader: DataViewReader): RgbColor {
+  const result = {} as any
+  result.r = reader.uint8()
+  result.g = reader.uint8()
+  result.b = reader.uint8()
+  return result
+}
+
+export function parseHsv(reader: DataViewReader): Hsv {
+  const result = {} as any
+  result.h = reader.uint8()
+  result.s = reader.uint8()
+  result.v = reader.uint8()
+  return result
+}
+
+export function parseRgbConfig(reader: DataViewReader): RgbConfig {
+  const result = {} as any
+  result.enabled = reader.uint8()
+  result.globalBrightness = reader.uint8()
+  result.currentEffect = reader.uint8()
+  result.solidColor = parseRgbColor(reader)
+  result.secondaryColor = parseRgbColor(reader)
+  result.effectSpeed = reader.uint8()
+  result.sleepTimeout = reader.uint8()
+  result.layerIndicatorMode = reader.uint8()
+  result.layerIndicatorKey = reader.uint8()
+  result.layerColors = Array.from({ length: 4 }, () => parseRgbColor(reader))
+  result.perKeyColors = Array.from({ length: 64 }, () => parseRgbColor(reader))
+  return result
+}
+
+export function parseJoystickAxisCalibration(reader: DataViewReader): JoystickAxisCalibration {
+  const result = {} as any
+  result.min = reader.uint16()
+  result.center = reader.uint16()
+  result.max = reader.uint16()
+  return result
+}
+
+export function parseJoystickConfig(reader: DataViewReader): JoystickConfig {
+  const result = {} as any
+  result.x = parseJoystickAxisCalibration(reader)
+  result.y = parseJoystickAxisCalibration(reader)
+  result.deadzone = reader.uint8()
+  result.mode = reader.uint8()
+  result.mouseSpeed = reader.uint8()
+  result.reserved = Array.from({ length: 5 }, () => reader.uint8())
+  return result
+}
+
+export function parseJoystickState(reader: DataViewReader): JoystickState {
+  const result = {} as any
+  result.rawX = reader.uint16()
+  result.rawY = reader.uint16()
+  result.outX = parseInt8(reader)
+  result.outY = parseInt8(reader)
+  result.sw = parseBool(reader)
+  return result
+}
+
+export function parseEeconfigCalibration(reader: DataViewReader): EeconfigCalibration {
   const result = {} as any
   result.initialRestValue = reader.uint16()
   result.initialBottomOutThreshold = reader.uint16()
@@ -272,13 +393,9 @@ export function parseEeconfigOptions(reader: DataViewReader): EeconfigOptions {
 
 export function parseEeconfigProfile(reader: DataViewReader): EeconfigProfile {
   const result = {} as any
-  result.keymap = Array.from({ length: 4 }, () =>
-    Array.from({ length: 64 }, () => reader.uint8()),
-  )
+  result.keymap = Array.from({ length: 4 }, () => Array.from({ length: 64 }, () => reader.uint8()))
   result.actuationMap = Array.from({ length: 64 }, () => parseActuation(reader))
-  result.advancedKeys = Array.from({ length: 32 }, () =>
-    parseAdvancedKey(reader),
-  )
+  result.advancedKeys = Array.from({ length: 32 }, () => parseAdvancedKey(reader))
   result.gamepadButtons = Array.from({ length: 64 }, () => reader.uint8())
   result.gamepadOptions = parseGamepadOptions(reader)
   result.tickRate = reader.uint8()
@@ -297,9 +414,7 @@ export function parseEeconfig(reader: DataViewReader): Eeconfig {
   result.options = parseEeconfigOptions(reader)
   result.currentProfile = reader.uint8()
   result.lastNonDefaultProfile = reader.uint8()
-  result.profiles = Array.from({ length: 4 }, () =>
-    parseEeconfigProfile(reader),
-  )
+  result.profiles = Array.from({ length: 4 }, () => parseEeconfigProfile(reader))
   result.magicEnd = reader.uint32()
   return result
 }

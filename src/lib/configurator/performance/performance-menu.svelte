@@ -17,6 +17,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import DistanceSlider from "$lib/components/distance-slider.svelte"
   import FixedScrollArea from "$lib/components/fixed-scroll-area.svelte"
   import Switch from "$lib/components/switch.svelte"
+  import { keyboardContext } from "$lib/keyboard"
   import {
     DEFAULT_ACTUATION_POINT,
     DEFAULT_RT_SENSITIVITY,
@@ -31,22 +32,37 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   const actuationQuery = actuationQueryContext.get()
   const { current: actuationMap } = $derived(actuationQuery.actuationMap)
 
-  const { disabled, currentActuation, rtEnabled, separatedRT } = $derived.by(
-    () => {
+  const { metadata } = keyboardContext.get()
+
+  const { disabled, currentActuation, rtEnabled, separatedRT, allDigital } =
+    $derived.by(() => {
       if (keys.size === 0 || !actuationMap) {
-        return { disabled: true } as const
+        return { disabled: true, allDigital: false } as const
       }
 
-      const [firstKey] = keys
+      const selectedKeys = [...keys]
+      const analogKeys = new Set(metadata.analogKeys ?? [])
+
+      // If we have no analog keys defined, assume all keys are analog for backwards compatibility
+      const hasAnalogDefinition = (metadata.analogKeys?.length ?? 0) > 0
+      const anyAnalogSelected = selectedKeys.some(
+        (k) => !hasAnalogDefinition || analogKeys.has(k),
+      )
+
+      if (!anyAnalogSelected) {
+        return { disabled: true, allDigital: true } as const
+      }
+
+      const [firstKey] = selectedKeys
       const currentActuation = actuationMap[firstKey]
       return {
         disabled: false,
+        allDigital: false,
         currentActuation,
         rtEnabled: currentActuation.rtDown > 0,
         separatedRT: currentActuation.rtUp > 0,
       } as const
-    },
-  )
+    })
 
   const updateActuation = (f: (actuation: HMK_Actuation) => HMK_Actuation) =>
     !disabled &&
@@ -59,89 +75,106 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 </script>
 
 <div class="grid size-full grid-cols-[minmax(0,1fr)_24rem]">
-  <FixedScrollArea class="flex flex-col gap-4 p-4">
-    <DistanceSlider
-      bind:committed={
-        () => currentActuation?.actuationPoint ?? DEFAULT_ACTUATION_POINT,
-        (v) =>
-          updateActuation((actuation) => ({ ...actuation, actuationPoint: v }))
-      }
-      description={rtEnabled
-        ? "Set the specific distance at which Rapid Trigger activates and deactivates."
-        : "Set the specific distance at which a key press and release is registered."}
-      {disabled}
-      title="Actuation Point"
-    />
-    <DistanceSlider
-      bind:committed={
-        () => currentActuation?.rtDown ?? DEFAULT_RT_SENSITIVITY,
-        (v) => updateActuation((actuation) => ({ ...actuation, rtDown: v }))
-      }
-      description={separatedRT
-        ? "Set the minimum distance change required for Rapid Trigger to register a key press."
-        : "Set the minimum distance change required for Rapid Trigger to register a key press or release."}
-      disabled={disabled || !rtEnabled}
-      title={separatedRT
-        ? "Rapid Trigger Press Sensitivity"
-        : "Rapid Trigger Sensitivity"}
-    />
-    {#if separatedRT}
+  {#if allDigital}
+    <div
+      class="col-span-2 flex items-center justify-center p-8 text-center text-muted-foreground"
+    >
+      <div>
+        <h2 class="mb-2 text-xl font-bold">Standard Digital Key</h2>
+        <p>
+          This key does not support analog features like Actuation Point or
+          Rapid Trigger.
+        </p>
+      </div>
+    </div>
+  {:else}
+    <FixedScrollArea class="flex flex-col gap-4 p-4">
       <DistanceSlider
         bind:committed={
-          () => currentActuation?.rtUp ?? DEFAULT_RT_SENSITIVITY,
-          (v) => updateActuation((actuation) => ({ ...actuation, rtUp: v }))
+          () => currentActuation?.actuationPoint ?? DEFAULT_ACTUATION_POINT,
+          (v) =>
+            updateActuation((actuation) => ({
+              ...actuation,
+              actuationPoint: v,
+            }))
         }
-        description="Set the minimum distance change required for Rapid Trigger to register a key release."
-        disabled={disabled || !rtEnabled}
-        title="Rapid Trigger Release Sensitivity"
+        description={rtEnabled
+          ? "Set the specific distance at which Rapid Trigger activates and deactivates."
+          : "Set the specific distance at which a key press and release is registered."}
+        {disabled}
+        title="Actuation Point"
       />
-    {/if}
-  </FixedScrollArea>
-  <FixedScrollArea class="flex flex-col gap-4 p-4">
-    <Switch
-      bind:checked={
-        () => rtEnabled ?? false,
-        (v) =>
-          updateActuation((actuation) => ({
-            ...actuation,
-            rtDown: v ? DEFAULT_RT_SENSITIVITY : 0,
-            rtUp: 0,
-            continuous: false,
-          }))
-      }
-      description="Rapid Trigger registers key presses and releases based on changes in key distance rather than absolute position. It activates and deactivates at the actuation point."
-      {disabled}
-      id="rapid-trigger"
-      title="Enable Rapid Trigger"
-    />
+      <DistanceSlider
+        bind:committed={
+          () => currentActuation?.rtDown ?? DEFAULT_RT_SENSITIVITY,
+          (v) => updateActuation((actuation) => ({ ...actuation, rtDown: v }))
+        }
+        description={separatedRT
+          ? "Set the minimum distance change required for Rapid Trigger to register a key press."
+          : "Set the minimum distance change required for Rapid Trigger to register a key press or release."}
+        disabled={disabled || !rtEnabled}
+        title={separatedRT
+          ? "Rapid Trigger Press Sensitivity"
+          : "Rapid Trigger Sensitivity"}
+      />
+      {#if separatedRT}
+        <DistanceSlider
+          bind:committed={
+            () => currentActuation?.rtUp ?? DEFAULT_RT_SENSITIVITY,
+            (v) => updateActuation((actuation) => ({ ...actuation, rtUp: v }))
+          }
+          description="Set the minimum distance change required for Rapid Trigger to register a key release."
+          disabled={disabled || !rtEnabled}
+          title="Rapid Trigger Release Sensitivity"
+        />
+      {/if}
+    </FixedScrollArea>
+    <FixedScrollArea class="flex flex-col gap-4 p-4">
+      <Switch
+        bind:checked={
+          () => rtEnabled ?? false,
+          (v) =>
+            updateActuation((actuation) => ({
+              ...actuation,
+              rtDown: v ? DEFAULT_RT_SENSITIVITY : 0,
+              rtUp: 0,
+              continuous: false,
+            }))
+        }
+        description="Rapid Trigger registers key presses and releases based on changes in key distance rather than absolute position. It activates and deactivates at the actuation point."
+        {disabled}
+        id="rapid-trigger"
+        title="Enable Rapid Trigger"
+      />
 
-    <Switch
-      bind:checked={
-        () => separatedRT ?? false,
-        (v) =>
-          updateActuation((actuation) => ({
-            ...actuation,
-            rtUp: v ? DEFAULT_RT_SENSITIVITY : 0,
-          }))
-      }
-      description="Configure sensitivity for key presses and releases independently."
-      disabled={disabled || !rtEnabled}
-      id="separate-rt"
-      title="Separate Press/Release Sensitivity"
-    />
-    <Switch
-      bind:checked={
-        () => currentActuation?.continuous ?? false,
-        (v) =>
-          updateActuation((actuation) => ({
-            ...actuation,
-            continuous: v,
-          }))
-      }
-      description="Deactivates Rapid Trigger only when the key is fully released, instead of at the actuation point."
-      disabled={disabled || !rtEnabled}
-      id="continuous-rapid-trigger"
-      title="Continuous Rapid Trigger"
-    />
-  </FixedScrollArea>
+      <Switch
+        bind:checked={
+          () => separatedRT ?? false,
+          (v) =>
+            updateActuation((actuation) => ({
+              ...actuation,
+              rtUp: v ? DEFAULT_RT_SENSITIVITY : 0,
+            }))
+        }
+        description="Configure sensitivity for key presses and releases independently."
+        disabled={disabled || !rtEnabled}
+        id="separate-rt"
+        title="Separate Press/Release Sensitivity"
+      />
+      <Switch
+        bind:checked={
+          () => currentActuation?.continuous ?? false,
+          (v) =>
+            updateActuation((actuation) => ({
+              ...actuation,
+              continuous: v,
+            }))
+        }
+        description="Deactivates Rapid Trigger only when the key is fully released, instead of at the actuation point."
+        disabled={disabled || !rtEnabled}
+        id="continuous-rapid-trigger"
+        title="Continuous Rapid Trigger"
+      />
+    </FixedScrollArea>
+  {/if}
 </div>

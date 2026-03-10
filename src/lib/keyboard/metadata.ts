@@ -115,6 +115,10 @@ export const keyboardMetadataSchema = z
       .default({ rgb: false, joystick: false }),
 
     layout: keyboardLayoutSchema,
+    analogKeys: z.array(z.number()).optional(),
+    ledMap: z.array(z.number()).optional(),
+    ledCoords: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+    modLedIndices: z.array(z.number()).optional(),
     defaultKeymap: z.array(z.array(keycodeSchema)).optional(),
     defaultKeymaps: z.array(z.array(z.array(keycodeSchema))).optional(),
   })
@@ -128,8 +132,8 @@ export const keyboardMetadataSchema = z
         return defaultKeymap === undefined
           ? undefined
           : [...Array(val.numProfiles)].map(() =>
-              defaultKeymap.map((layer) => [...layer]),
-            )
+            defaultKeymap.map((layer) => [...layer]),
+          )
       }
     }
 
@@ -190,147 +194,158 @@ export const demoMetadata = keyboardMetadataSchema.parse({
   },
 
   layout: {
-    labels: ["default"],
-    keymap: [
-      [
-        {
-          key: 0,
-        },
-        {
-          key: 1,
-        },
-        {
-          key: 2,
-        },
-        {
-          key: 3,
-        },
-        {
-          key: 4,
-        },
-        {
-          key: 5,
-        },
-        {
-          key: 6,
-        },
-        {
-          key: 7,
-        },
-        {
-          key: 8,
-        },
-        {
-          key: 9,
-        },
-      ],
-      [
-        {
-          key: 10,
-        },
-        {
-          key: 11,
-        },
-        {
-          key: 12,
-        },
-        {
-          key: 13,
-        },
-        {
-          key: 14,
-        },
-        {
-          key: 15,
-        },
-        {
-          key: 16,
-        },
-        {
-          key: 17,
-        },
-        {
-          key: 18,
-        },
-        {
-          key: 19,
-        },
-      ],
-      [
-        {
-          key: 20,
-        },
-        {
-          key: 21,
-        },
-        {
-          key: 22,
-        },
-        {
-          key: 23,
-        },
-        {
-          key: 24,
-        },
-        {
-          key: 25,
-        },
-        {
-          key: 26,
-        },
-        {
-          key: 27,
-        },
-        {
-          key: 28,
-        },
-        {
-          key: 29,
-        },
-      ],
-      [
-        {
-          key: 30,
-        },
-        {
-          key: 31,
-        },
-        {
-          key: 32,
-        },
-        {
-          key: 33,
-        },
-        {
-          key: 34,
-        },
-        {
-          key: 35,
-        },
-        {
-          key: 36,
-        },
-        {
-          key: 37,
-        },
-        {
-          key: 38,
-        },
-        {
-          key: 39,
-        },
-      ],
-      [
-        {
-          key: 40,
-          x: 4.5,
-          y: 4.5,
-          label: "STICK",
-        },
-      ],
+  "labels": [
+    "default"
+  ],
+  "keymap": [
+    [
+      {
+        "key": 0
+      },
+      {
+        "key": 1
+      },
+      {
+        "key": 2
+      },
+      {
+        "key": 3
+      },
+      {
+        "key": 4
+      },
+      {
+        "key": 30
+      },
+      {
+        "key": 31
+      },
+      {
+        "key": 5
+      },
+      {
+        "key": 6
+      },
+      {
+        "key": 7
+      },
+      {
+        "key": 8
+      },
+      {
+        "key": 9
+      }
     ],
-  },
-  defaultKeymaps: [...Array(4)].map(() =>
-    [...Array(4)].map(() => Array(41).fill("KC_NO")),
-  ),
+    [
+      {
+        "key": 10
+      },
+      {
+        "key": 11
+      },
+      {
+        "key": 12
+      },
+      {
+        "key": 13
+      },
+      {
+        "key": 14
+      },
+      {
+        "key": 40,
+        "w": 2,
+        "h": 2,
+        "label": "STICK"
+      },
+      {
+        "key": 15
+      },
+      {
+        "key": 16
+      },
+      {
+        "key": 17
+      },
+      {
+        "key": 18
+      },
+      {
+        "key": 19
+      }
+    ],
+    [
+      {
+        "key": 20
+      },
+      {
+        "key": 21
+      },
+      {
+        "key": 22
+      },
+      {
+        "key": 23
+      },
+      {
+        "key": 24
+      },
+      {
+        "key": 25,
+        "x": 2
+      },
+      {
+        "key": 26
+      },
+      {
+        "key": 27
+      },
+      {
+        "key": 28
+      },
+      {
+        "key": 29
+      }
+    ],
+    [
+      {
+        "key": 38,
+        "w": 1.25
+      },
+      {
+        "key": 36,
+        "w": 1.25
+      },
+      {
+        "key": 32,
+        "w": 2.25
+      },
+      {
+        "key": 33,
+        "w": 1.25
+      },
+      {
+        "key": 34,
+        "w": 1.25
+      },
+      {
+        "key": 35,
+        "w": 2.25
+      },
+      {
+        "key": 37,
+        "w": 1.25
+      },
+      {
+        "key": 39,
+        "w": 1.25
+      }
+    ]
+  ]
+},
+  analogKeys: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+  ledMap: [39,37,35,34,33,32,36,38,20,21,22,23,24,25,26,27,28,29,19,18,17,16,15,14,13,12,11,10,0,1,2,3,4,30,31,5,6,7,8,9],
+  ledCoords: [{"x":252,"y":255},{"x":223,"y":255},{"x":182,"y":255},{"x":141,"y":255},{"x":113,"y":255},{"x":72,"y":255},{"x":31,"y":255},{"x":2,"y":255},{"x":0,"y":170},{"x":23,"y":170},{"x":46,"y":170},{"x":69,"y":170},{"x":92,"y":170},{"x":162,"y":170},{"x":185,"y":170},{"x":208,"y":170},{"x":231,"y":170},{"x":255,"y":170},{"x":255,"y":85},{"x":231,"y":85},{"x":208,"y":85},{"x":185,"y":85},{"x":162,"y":85},{"x":92,"y":85},{"x":69,"y":85},{"x":46,"y":85},{"x":23,"y":85},{"x":0,"y":85},{"x":0,"y":0},{"x":23,"y":0},{"x":46,"y":0},{"x":69,"y":0},{"x":92,"y":0},{"x":115,"y":0},{"x":139,"y":0},{"x":162,"y":0},{"x":185,"y":0},{"x":208,"y":0},{"x":231,"y":0},{"x":255,"y":0}],
+  modLedIndices: [0,1,2,3,4,5,6,7,33,34],
+  defaultKeymaps: [...Array(4)].map(() => [...Array(4)].map(() => Array(41).fill("KC_NO"))),
 })

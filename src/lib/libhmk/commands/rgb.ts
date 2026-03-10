@@ -14,43 +14,54 @@ export const rgbColorSchema = z.object({
 export type HMK_RgbColor = z.infer<typeof rgbColorSchema>
 
 // The firmware structure layout (matches rgb_config_t in rgb.h)
-// uint8_t enabled;
-// uint8_t global_brightness;
-// uint8_t current_effect;
-// rgb_color_t solid_color; (3 bytes)
-// uint8_t effect_speed;
-// rgb_color_t per_key_colors[NUM_KEYS]; (64 * 3 = 192 bytes)
+// uint8_t enabled;                        (1 byte)
+// uint8_t global_brightness;              (1 byte)
+// uint8_t current_effect;                 (1 byte)
+// rgb_color_t solid_color;                (3 bytes)
+// rgb_color_t secondary_color;            (3 bytes)
+// uint8_t effect_speed;                   (1 byte)
+// uint8_t sleep_timeout;                  (1 byte)
+// uint8_t layer_indicator_mode;           (1 byte)
+// uint8_t layer_indicator_key;            (1 byte)
+// rgb_color_t layer_colors[NUM_LAYERS];   (NUM_LAYERS * 3 bytes)
+// rgb_color_t per_key_colors[NUM_KEYS];   (NUM_KEYS * 3 bytes)
 //
-// Total size: 1 + 1 + 1 + 3 + 1 + 192 = 199 bytes
+// Header size: 13 bytes (before layer_colors)
 
 export const rgbConfigSchema = z.object({
   enabled: z.number(),
   globalBrightness: z.number(),
   currentEffect: z.number(),
   solidColor: rgbColorSchema,
+  secondaryColor: rgbColorSchema,
   effectSpeed: z.number(),
+  sleepTimeout: z.number(),
+  layerIndicatorMode: z.number(),
+  layerIndicatorKey: z.number(),
+  layerColors: z.array(rgbColorSchema),
   perKeyColors: z.array(rgbColorSchema),
 })
 
 export type HMK_RgbConfig = z.infer<typeof rgbConfigSchema>
 
 export const GET_SET_RGB_CONFIG_MAX_ENTRIES = 59
-export const RGB_CONFIG_HEADER_SIZE = 7 // enabled(1) + brightness(1) + effect(1) + solidColor(3) + speed(1)
+const RGB_CONFIG_BASE_HEADER_SIZE = 13 // enabled(1) + brightness(1) + effect(1) + solidColor(3) + secondaryColor(3) + speed(1) + sleepTimeout(1) + layerIndicatorMode(1) + layerIndicatorKey(1)
 
-function rgbConfigSize(numKeys: number) {
-  return RGB_CONFIG_HEADER_SIZE + numKeys * 3
+function rgbConfigSize(numKeys: number, numLayers: number) {
+  return RGB_CONFIG_BASE_HEADER_SIZE + numLayers * 3 + numKeys * 3
 }
 
 export type GetRgbConfigParams = {
   profile: number
   numKeys: number
+  numLayers: number
 }
 
 export async function getRgbConfig(
   commander: Commander,
   params: GetRgbConfigParams,
 ): Promise<HMK_RgbConfig> {
-  const configSize = rgbConfigSize(params.numKeys)
+  const configSize = rgbConfigSize(params.numKeys, params.numLayers)
   const data: number[] = []
 
   while (data.length < configSize) {
@@ -83,7 +94,20 @@ export async function getRgbConfig(
   const globalBrightness = data[ptr++]
   const currentEffect = data[ptr++]
   const solidColor = { r: data[ptr++], g: data[ptr++], b: data[ptr++] }
+  const secondaryColor = { r: data[ptr++], g: data[ptr++], b: data[ptr++] }
   const effectSpeed = data[ptr++]
+  const sleepTimeout = data[ptr++]
+  const layerIndicatorMode = data[ptr++]
+  const layerIndicatorKey = data[ptr++]
+
+  const layerColors: HMK_RgbColor[] = []
+  for (let i = 0; i < params.numLayers; i++) {
+    layerColors.push({
+      r: data[ptr++],
+      g: data[ptr++],
+      b: data[ptr++],
+    })
+  }
 
   const perKeyColors: HMK_RgbColor[] = []
   for (let i = 0; i < params.numKeys; i++) {
@@ -99,7 +123,12 @@ export async function getRgbConfig(
     globalBrightness,
     currentEffect,
     solidColor,
+    secondaryColor,
     effectSpeed,
+    sleepTimeout,
+    layerIndicatorMode,
+    layerIndicatorKey,
+    layerColors,
     perKeyColors,
   }
 }
@@ -107,6 +136,7 @@ export async function getRgbConfig(
 export type SetRgbConfigParams = {
   profile: number
   numKeys: number
+  numLayers: number
   data: HMK_RgbConfig
 }
 
@@ -122,7 +152,20 @@ export async function setRgbConfig(
   rawBytes.push(params.data.solidColor.r)
   rawBytes.push(params.data.solidColor.g)
   rawBytes.push(params.data.solidColor.b)
+  rawBytes.push(params.data.secondaryColor.r)
+  rawBytes.push(params.data.secondaryColor.g)
+  rawBytes.push(params.data.secondaryColor.b)
   rawBytes.push(params.data.effectSpeed)
+  rawBytes.push(params.data.sleepTimeout)
+  rawBytes.push(params.data.layerIndicatorMode)
+  rawBytes.push(params.data.layerIndicatorKey)
+
+  for (let i = 0; i < params.numLayers; i++) {
+    const color = params.data.layerColors[i] || { r: 0, g: 0, b: 0 }
+    rawBytes.push(color.r)
+    rawBytes.push(color.g)
+    rawBytes.push(color.b)
+  }
 
   for (let i = 0; i < params.numKeys; i++) {
     // If array is short for some reason, pad with 0
