@@ -72,7 +72,7 @@ export async function getRgbConfig(
       }),
     )
 
-    const response = parseCommandOutBuffer(reader)
+    const response = parseCommandOutBuffer(reader, HMK_Command.GET_RGB_CONFIG)
 
     if (
       response.commandId !== HMK_Command.GET_RGB_CONFIG ||
@@ -198,7 +198,7 @@ export async function setRgbConfig(
       }),
     )
 
-    const response = parseCommandOutBuffer(reader)
+    const response = parseCommandOutBuffer(reader, HMK_Command.SET_RGB_CONFIG)
     if (response.commandId !== HMK_Command.SET_RGB_CONFIG) {
       throw new Error(`Failed to set RGB config for profile ${params.profile}`)
     }

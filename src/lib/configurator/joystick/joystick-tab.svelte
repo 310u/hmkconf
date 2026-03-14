@@ -12,28 +12,42 @@
   import type { HTMLAttributes } from "svelte/elements"
   import { globalStateContext } from "../context.svelte"
 
+  const JOYSTICK_STATE_POLL_INTERVAL = 1000 / 30
+
   const {
     class: className,
     ...props
   }: WithoutChildren<HTMLAttributes<HTMLDivElement>> = $props()
 
   const keyboard = keyboardContext.get() as Keyboard
-  const { profile } = $derived(globalStateContext.get())
+  const { profile, tab } = $derived(globalStateContext.get())
 
   let config = $state<HMK_JoystickConfig | null>(null)
   let joystickState = $state<HMK_JoystickState | null>(null)
   let loading = $state(true)
 
   let calibrationPhase = $state<"idle" | "rest" | "max">("idle")
+  let calibrationPreviousMode = $state<number | null>(null)
 
   $effect(() => {
-    loading = true
-    keyboard.getJoystickConfig?.({ profile }).then((c) => {
-      config = c
-      loading = false
-    })
+    if (tab !== "joystick") return
 
+    loading = true
     let active = true
+    let pollTimeout: number | null = null
+
+    keyboard.getJoystickConfig?.({ profile })
+      .then((c) => {
+        if (!active) return
+        config = c
+      })
+      .catch(() => {
+        // ignore disconnects
+      })
+      .finally(() => {
+        if (active) loading = false
+      })
+
     async function pollState() {
       if (!active) return
       try {
@@ -44,13 +58,19 @@
         // ignore disconnects
       }
       if (active) {
-        requestAnimationFrame(pollState)
+        pollTimeout = window.setTimeout(
+          pollState,
+          JOYSTICK_STATE_POLL_INTERVAL,
+        )
       }
     }
     pollState()
 
     return () => {
       active = false
+      if (pollTimeout !== null) {
+        clearTimeout(pollTimeout)
+      }
     }
   })
 
@@ -92,13 +112,21 @@
     }
   })
 
-  function startCalibration() {
+  async function startCalibration() {
+    if (!config) return
+
     centerSamplesX = []
     centerSamplesY = []
     minX = 4095
     maxX = 0
     minY = 4095
     maxY = 0
+
+    calibrationPreviousMode = config.mode
+    if (config.mode !== 0) {
+      await updateConfig({ mode: 0 })
+    }
+
     calibrationPhase = "rest"
   }
 
@@ -110,8 +138,15 @@
     }
   }
 
-  function cancelCalibration() {
+  async function cancelCalibration() {
     calibrationPhase = "idle"
+    if (calibrationPreviousMode !== null && config) {
+      const restoreMode = calibrationPreviousMode
+      calibrationPreviousMode = null
+      if (config.mode !== restoreMode) {
+        await updateConfig({ mode: restoreMode })
+      }
+    }
   }
 
   async function finishCalibration() {
@@ -133,8 +168,12 @@
     updated.x.max = Math.max(maxX, updated.x.center + 100)
     updated.y.min = Math.min(minY, updated.y.center - 100)
     updated.y.max = Math.max(maxY, updated.y.center + 100)
+    if (calibrationPreviousMode !== null) {
+      updated.mode = calibrationPreviousMode
+    }
 
     calibrationPhase = "idle"
+    calibrationPreviousMode = null
 
     config = updated
     await keyboard.setJoystickConfig?.({ profile, config: updated })
@@ -197,6 +236,30 @@
       </div>
     {/if}
 
+    {#if config.mode === 1}
+      <div class="flex flex-col gap-2">
+        <div class="grid text-sm">
+          <span class="font-medium"
+            >Mouse Acceleration: {config.mouseAcceleration}</span
+          >
+          <span class="text-muted-foreground"
+            >Lower values feel more linear. Higher values increase the speed
+            boost near the edge.</span
+          >
+        </div>
+        <Slider
+          type="single"
+          bind:value={
+            () => config!.mouseAcceleration,
+            (v) => updateConfig({ mouseAcceleration: v })
+          }
+          max={255}
+          min={1}
+          step={1}
+        />
+      </div>
+    {/if}
+
     <div class="flex flex-col gap-2">
       <div class="grid text-sm">
         <span class="font-medium"
@@ -212,6 +275,25 @@
           () => config!.deadzone, (v) => updateConfig({ deadzone: v })
         }
         max={127}
+        min={0}
+        step={1}
+      />
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="grid text-sm">
+        <span class="font-medium">Button Debounce: {config.swDebounceMs}ms</span
+        >
+        <span class="text-muted-foreground"
+          >Stabilization time for the push switch to prevent chattering.</span
+        >
+      </div>
+      <Slider
+        type="single"
+        bind:value={
+          () => config!.swDebounceMs, (v) => updateConfig({ swDebounceMs: v })
+        }
+        max={50}
         min={0}
         step={1}
       />
@@ -240,7 +322,8 @@
       {#if calibrationPhase === "idle"}
         <p class="mb-4 text-sm text-muted-foreground">
           Click below to calibrate the joystick's resting center and maximum
-          ranges.
+          ranges. Mouse/scroll output is temporarily disabled during
+          calibration.
         </p>
         <Button onclick={startCalibration}>Start Calibration</Button>
         <div

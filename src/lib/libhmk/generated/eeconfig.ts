@@ -127,6 +127,8 @@ export interface JoystickConfig {
   deadzone: number
   mode: number
   mouseSpeed: number
+  mouseAcceleration: number
+  swDebounceMs: number
   reserved: number[]
 }
 
@@ -363,7 +365,9 @@ export function parseJoystickConfig(reader: DataViewReader): JoystickConfig {
   result.deadzone = reader.uint8()
   result.mode = reader.uint8()
   result.mouseSpeed = reader.uint8()
-  result.reserved = Array.from({ length: 5 }, () => reader.uint8())
+  result.mouseAcceleration = reader.uint8()
+  result.swDebounceMs = reader.uint8()
+  result.reserved = Array.from({ length: 3 }, () => reader.uint8())
   return result
 }
 

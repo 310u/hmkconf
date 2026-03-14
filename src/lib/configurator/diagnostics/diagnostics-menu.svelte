@@ -19,20 +19,24 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import { Button } from "$lib/components/ui/button"
   import { keyboardContext } from "$lib/keyboard"
   import type { HMK_AnalogInfo } from "$lib/libhmk/commands"
-  import { analogInfo } from "$lib/libhmk/commands/analog-info"
-  import { onDestroy, onMount } from "svelte"
+  import { onDestroy } from "svelte"
+  import { globalStateContext } from "../context.svelte"
+
+  const DIAGNOSTICS_POLL_INTERVAL = 1000 / 30
 
   let { class: className, ...props }: any = $props()
 
   const keyboard = keyboardContext.get()
   const { numKeys, adcResolution } = keyboard.metadata
+  const { tab } = $derived(globalStateContext.get())
 
   let polling = $state(false)
-  let pollTimeout: number
+  let pollTimeout = 0
   let lastError = $state("")
   let analogData: HMK_AnalogInfo[] = $state(
     Array(numKeys).fill({ adcValue: 0, distance: 0 }),
   )
+  let wasDiagnosticsTab = false
 
   const maxAdc = (1 << adcResolution) - 1
 
@@ -50,8 +54,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     }
 
     if (polling) {
-      // Use requestAnimationFrame for immediate frame-synced polling
-      pollTimeout = requestAnimationFrame(pollLoop)
+      pollTimeout = window.setTimeout(pollLoop, DIAGNOSTICS_POLL_INTERVAL)
     }
   }
 
@@ -63,11 +66,19 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
   function stopPolling() {
     polling = false
-    cancelAnimationFrame(pollTimeout)
+    clearTimeout(pollTimeout)
   }
 
-  onMount(() => {
-    startPolling()
+  $effect(() => {
+    const isDiagnosticsTab = tab === "diagnostics"
+
+    if (isDiagnosticsTab && !wasDiagnosticsTab) {
+      startPolling()
+    } else if (!isDiagnosticsTab && wasDiagnosticsTab) {
+      stopPolling()
+    }
+
+    wasDiagnosticsTab = isDiagnosticsTab
   })
 
   onDestroy(() => {

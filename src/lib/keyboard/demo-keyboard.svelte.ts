@@ -234,6 +234,8 @@ export class DemoKeyboard implements Keyboard {
       deadzone: 150,
       mode: 0,
       mouseSpeed: 10,
+      mouseAcceleration: 255,
+      swDebounceMs: 5,
     }
   }
   async setJoystickConfig({

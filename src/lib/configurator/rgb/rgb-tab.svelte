@@ -12,6 +12,7 @@
   import type { HTMLAttributes } from "svelte/elements"
   import { globalStateContext } from "../context.svelte"
 
+  const RGB_EFFECT_ANALOG = 51
   const RGB_EFFECT_PER_KEY = 52
 
   const {
@@ -21,18 +22,23 @@
 
   const keyboard = keyboardContext.get() as Keyboard
   const { metadata } = keyboard
-  const { profile } = $derived(globalStateContext.get())
+  const { profile, tab } = $derived(globalStateContext.get())
 
   let rgbConfig = $state<HMK_RgbConfig | null>(null)
   let loading = $state(true)
   let selectedKeyIndex = $state<number | null>(null)
 
   $effect(() => {
+    if (tab !== "rgb") return
+
     loading = true
-    keyboard.getRgbConfig?.({ profile }).then((config) => {
-      rgbConfig = config
-      loading = false
-    })
+    keyboard.getRgbConfig?.({ profile })
+      .then((config) => {
+        rgbConfig = config
+      })
+      .finally(() => {
+        loading = false
+      })
   })
 
   async function updateConfig(newConfig: Partial<HMK_RgbConfig>) {
@@ -292,7 +298,7 @@
   }
 
   $effect(() => {
-    if (rgbConfig?.enabled && rgbConfig.currentEffect > 1) {
+    if (tab === "rgb" && rgbConfig?.enabled && rgbConfig.currentEffect > 1) {
       const interval = setInterval(() => {
         if (!rgbConfig) return
         time += 1
@@ -905,7 +911,7 @@
         const c = hsvToRgb(baseHue, 255, v)
         return rgbCss(c.r, c.g, c.b)
       }
-      case 51: {
+      case RGB_EFFECT_ANALOG: {
         const dist = previewReactiveIntensity(
           ledIndex,
           "simple",
@@ -915,15 +921,13 @@
         const bgR = (secR * effectiveBrightness) / 255
         const bgG = (secG * effectiveBrightness) / 255
         const bgB = (secB * effectiveBrightness) / 255
-        const c = hsvToRgb(
-          (baseHue + 85 - (dist * 85) / 255) & 0xff,
-          255,
-          effectiveBrightness,
-        )
+        const pressedR = (baseR * effectiveBrightness) / 255
+        const pressedG = (baseG * effectiveBrightness) / 255
+        const pressedB = (baseB * effectiveBrightness) / 255
         return rgbCss(
-          (c.r * dist + bgR * (255 - dist)) / 255,
-          (c.g * dist + bgG * (255 - dist)) / 255,
-          (c.b * dist + bgB * (255 - dist)) / 255,
+          (pressedR * dist + bgR * (255 - dist)) / 255,
+          (pressedG * dist + bgG * (255 - dist)) / 255,
+          (pressedB * dist + bgB * (255 - dist)) / 255,
         )
       }
       case RGB_EFFECT_PER_KEY: {
@@ -1063,6 +1067,8 @@
                 Solid Color
               {:else if rgbConfig.currentEffect === RGB_EFFECT_PER_KEY}
                 Brush Color (Click key to paint)
+              {:else if rgbConfig.currentEffect === RGB_EFFECT_ANALOG}
+                Pressed Color
               {:else}
                 Base Color
               {/if}
@@ -1125,12 +1131,16 @@
       {/if}
 
       <!-- Secondary Color Picker (for dual-color effects) -->
-      {#if [2, 16, 20, 48, 49].includes(rgbConfig.currentEffect)}
+      {#if [2, 16, 20, 48, 49, RGB_EFFECT_ANALOG].includes(
+        rgbConfig.currentEffect,
+      )}
         <div class="flex flex-col gap-2">
           <div class="grid text-sm text-wrap">
             <span class="font-semibold"
               >{rgbConfig.currentEffect === 2
                 ? "Alpha Color"
+                : rgbConfig.currentEffect === RGB_EFFECT_ANALOG
+                  ? "Base Color"
                 : "Secondary Color"}</span
             >
           </div>

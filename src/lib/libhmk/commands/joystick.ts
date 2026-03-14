@@ -20,6 +20,8 @@ export const joystickConfigSchema = z.object({
   deadzone: uint8Schema,
   mode: uint8Schema,
   mouseSpeed: uint8Schema,
+  mouseAcceleration: uint8Schema,
+  swDebounceMs: uint8Schema,
 })
 export type HMK_JoystickConfig = z.infer<typeof joystickConfigSchema>
 
@@ -42,7 +44,7 @@ export async function getJoystickState(
     }),
   )
 
-  const header = parseCommandOutBuffer(reader)
+  parseCommandOutBuffer(reader, HMK_Command.GET_JOYSTICK_STATE)
   const profile = reader.uint8()
   const rawX = reader.uint16()
   const rawY = reader.uint16()
@@ -70,7 +72,7 @@ export async function getJoystickConfig(
     }),
   )
 
-  const header = parseCommandOutBuffer(reader)
+  parseCommandOutBuffer(reader, HMK_Command.GET_JOYSTICK_CONFIG)
 
   // Read embedded payload:
   // typedef struct { uint8_t data[20]; } command_out_joystick_config_t;
@@ -86,7 +88,10 @@ export async function getJoystickConfig(
   const deadzone = reader.uint8()
   const mode = reader.uint8()
   const mouseSpeed = reader.uint8()
-  // Skip 5 reserved bytes if needed
+  const mouseAcceleration = reader.uint8() || 255
+  const swDebounceMs = reader.uint8()
+  // Skip 3 reserved bytes
+  reader.offset += 3
 
   return {
     x: { min: xMin, center: xCenter, max: xMax },
@@ -94,6 +99,8 @@ export async function getJoystickConfig(
     deadzone,
     mode,
     mouseSpeed,
+    mouseAcceleration,
+    swDebounceMs,
   }
 }
 
@@ -121,8 +128,10 @@ export async function setJoystickConfig(
   view.setUint8(13, params.config.deadzone)
   view.setUint8(14, params.config.mode)
   view.setUint8(15, params.config.mouseSpeed)
+  view.setUint8(16, params.config.mouseAcceleration)
+  view.setUint8(17, params.config.swDebounceMs)
 
-  // reserved bytes remain 0 by default when using Uint8Array constructor
+  // remaining reserved bytes remain 0 by default when using Uint8Array constructor
 
   await commander.sendCommand({
     command: HMK_Command.SET_JOYSTICK_CONFIG,

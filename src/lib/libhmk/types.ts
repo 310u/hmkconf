@@ -303,14 +303,14 @@ export interface CommandOutBuffer {
 
 export function parseCommandOutBuffer(
   reader: DataViewReader,
+  commandId: number,
 ): CommandOutBuffer {
-  const commandId = reader.uint8()
-
-  // Read remaining 63 bytes into array
+  // Commander already strips the echoed command byte from the HID report.
+  // Parse the remaining payload without advancing the caller's reader.
   const rgbConfigData: number[] = []
-  for (let i = 0; i < 63; i++) {
-    if (reader.offset < reader.view.byteLength) {
-      rgbConfigData.push(reader.uint8())
+  for (let offset = reader.offset; offset < reader.view.byteLength; offset++) {
+    if (rgbConfigData.length < 63) {
+      rgbConfigData.push(reader.view.getUint8(offset))
     } else {
       break
     }
