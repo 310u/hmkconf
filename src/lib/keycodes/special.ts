@@ -200,6 +200,36 @@ export const specialKeycodeMetadata: KeycodeMetadata[] = [
     webCodes: [],
     category: "Special",
   },
+  {
+    name: "RGB\nToggle",
+    tooltip: "Toggle RGB lighting on or off for the current profile",
+    keycode: Keycode.SP_RGB_TOGGLE,
+    webCodes: [],
+    category: "Special",
+  },
+  {
+    name: "RGB Bri\nUp",
+    tooltip: "Increase RGB brightness for the current profile",
+    display: [SunIcon],
+    keycode: Keycode.SP_RGB_BRIGHTNESS_UP,
+    webCodes: [],
+    category: "Special",
+  },
+  {
+    name: "RGB Bri\nDown",
+    tooltip: "Decrease RGB brightness for the current profile",
+    display: [SunDimIcon],
+    keycode: Keycode.SP_RGB_BRIGHTNESS_DOWN,
+    webCodes: [],
+    category: "Special",
+  },
+  {
+    name: "Poll\n1k/8k",
+    tooltip: "Toggle USB polling rate between 1kHz and 8kHz, then reboot",
+    keycode: Keycode.SP_POLL_RATE_TOGGLE,
+    webCodes: [],
+    category: "Special",
+  },
 ]
 
 export function getSpecialKeycodes(numLayers: number) {
@@ -225,6 +255,10 @@ export function getSpecialKeycodes(numLayers: number) {
     Keycode.SP_LAYER_LOCK,
     Keycode.SP_JOY_MODE_NEXT,
     Keycode.SP_JOY_SCROLL_MO,
+    Keycode.SP_RGB_TOGGLE,
+    Keycode.SP_RGB_BRIGHTNESS_UP,
+    Keycode.SP_RGB_BRIGHTNESS_DOWN,
+    Keycode.SP_POLL_RATE_TOGGLE,
     Keycode.SP_BOOT,
   ]
 }
