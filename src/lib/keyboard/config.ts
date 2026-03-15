@@ -15,7 +15,9 @@
 
 import { uint8Schema, uint16Schema } from "$lib/integer"
 import { hmkActuationSchema } from "$lib/libhmk/actuation"
-import { hmkAdvancedKeySchema } from "$lib/libhmk/advanced-keys"
+import { hmkAdvancedKeySchema, hmkMacroSchema } from "$lib/libhmk/advanced-keys"
+import { joystickConfigSchema as hmkJoystickConfigSchema } from "$lib/libhmk/commands/joystick"
+import { rgbConfigSchema as hmkRgbConfigSchema } from "$lib/libhmk/commands/rgb"
 import { hmkGamepadOptionsSchema } from "$lib/libhmk/gamepad"
 import z from "zod"
 
@@ -41,5 +43,8 @@ export const keyboardConfigSchema = z.object({
     gamepadButtons: ignoreOnError(z.array(uint8Schema)),
     gamepadOptions: ignoreOnError(hmkGamepadOptionsSchema),
     tickRate: ignoreOnError(uint8Schema),
+    macros: ignoreOnError(z.array(hmkMacroSchema)),
+    rgbConfig: ignoreOnError(hmkRgbConfigSchema),
+    joystickConfig: ignoreOnError(hmkJoystickConfigSchema),
   }),
 })

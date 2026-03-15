@@ -14,6 +14,7 @@
  */
 
 import { DataViewReader } from "$lib/data-view-reader"
+import { uint32ToUInt8s } from "$lib/integer"
 import type { SetOptionsParams } from "$lib/keyboard"
 import type { Commander } from "$lib/keyboard/commander"
 import { HMK_Command } from "."
@@ -22,13 +23,14 @@ import type { HMK_Options } from ".."
 export async function getOptions(commander: Commander): Promise<HMK_Options> {
   const optionsRaw = new DataViewReader(
     await commander.sendCommand({ command: HMK_Command.GET_OPTIONS }),
-  ).uint16()
+  ).uint32()
 
   return {
     xInputEnabled: ((optionsRaw >> 0) & 1) !== 0,
     saveBottomOutThreshold: ((optionsRaw >> 1) & 1) !== 0,
     highPollingRateEnabled: ((optionsRaw >> 2) & 1) !== 0,
     continuousCalibration: ((optionsRaw >> 3) & 1) !== 0,
+    raw: optionsRaw,
   }
 }
 
@@ -40,16 +42,25 @@ export async function setOptions(
       saveBottomOutThreshold,
       highPollingRateEnabled,
       continuousCalibration,
+      raw,
     },
   }: SetOptionsParams,
 ) {
+  const optionsRaw =
+    (raw &
+      ~(
+        (1 << 0) |
+        (1 << 1) |
+        (1 << 2) |
+        (1 << 3)
+      )) |
+    ((xInputEnabled ? 1 : 0) << 0) |
+    ((saveBottomOutThreshold ? 1 : 0) << 1) |
+    ((highPollingRateEnabled ? 1 : 0) << 2) |
+    ((continuousCalibration ? 1 : 0) << 3)
+
   await commander.sendCommand({
     command: HMK_Command.SET_OPTIONS,
-    payload: [
-      ((xInputEnabled ? 1 : 0) << 0) |
-        ((saveBottomOutThreshold ? 1 : 0) << 1) |
-        ((highPollingRateEnabled ? 1 : 0) << 2) |
-        ((continuousCalibration ? 1 : 0) << 3),
-    ],
+    payload: [...uint32ToUInt8s(optionsRaw)],
   })
 }

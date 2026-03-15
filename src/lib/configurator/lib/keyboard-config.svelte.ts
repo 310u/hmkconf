@@ -22,6 +22,7 @@ import { actuationQueryContext } from "../queries/actuation-query.svelte"
 import { advancedKeysQueryContext } from "../queries/advanced-keys-query.svelte"
 import { gamepadQueryContext } from "../queries/gamepad-query.svelte"
 import { keymapQueryContext } from "../queries/keymap-query.svelte"
+import { macrosQueryContext } from "../queries/macros-query.svelte"
 import { tickRateQueryContext } from "../queries/tick-rate-query.svelte"
 
 export class KeyboardConfig {
@@ -92,6 +93,7 @@ export class KeyboardConfig {
   #actuationQuery = actuationQueryContext.get()
   #advancedKeysQuery = advancedKeysQueryContext.get()
   #gamepadQuery = gamepadQueryContext.get()
+  #macrosQuery = macrosQueryContext.get()
   #tickRateQuery = tickRateQueryContext.get()
 
   async getConfig(profile: number) {
@@ -108,6 +110,13 @@ export class KeyboardConfig {
         gamepadButtons: await this.#keyboard.getGamepadButtons({ profile }),
         gamepadOptions: await this.#keyboard.getGamepadOptions({ profile }),
         tickRate: await this.#keyboard.getTickRate({ profile }),
+        macros: await this.#keyboard.getMacros({ profile }),
+        rgbConfig: this.#keyboard.getRgbConfig
+          ? await this.#keyboard.getRgbConfig({ profile })
+          : undefined,
+        joystickConfig: this.#keyboard.getJoystickConfig
+          ? await this.#keyboard.getJoystickConfig({ profile })
+          : undefined,
       },
     })
   }
@@ -121,6 +130,9 @@ export class KeyboardConfig {
         gamepadButtons,
         gamepadOptions,
         tickRate,
+        macros,
+        rgbConfig,
+        joystickConfig,
       },
     } = this.#schema.parse(config)
     const shouldRefetch = this.#profile === profile
@@ -174,6 +186,23 @@ export class KeyboardConfig {
     if (tickRate !== undefined) {
       await this.#keyboard.setTickRate({ profile, data: tickRate })
       if (shouldRefetch) this.#tickRateQuery.tickRate.refetch()
+    }
+
+    if (macros !== undefined) {
+      await this.#keyboard.setMacros({
+        profile,
+        offset: 0,
+        data: macros,
+      })
+      if (shouldRefetch) this.#macrosQuery.macros.refetch()
+    }
+
+    if (rgbConfig !== undefined && this.#keyboard.setRgbConfig) {
+      await this.#keyboard.setRgbConfig({ profile, data: rgbConfig })
+    }
+
+    if (joystickConfig !== undefined && this.#keyboard.setJoystickConfig) {
+      await this.#keyboard.setJoystickConfig({ profile, config: joystickConfig })
     }
   }
 }

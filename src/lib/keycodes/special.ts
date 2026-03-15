@@ -193,6 +193,13 @@ export const specialKeycodeMetadata: KeycodeMetadata[] = [
     webCodes: [],
     category: "Special",
   },
+  {
+    name: "Joy Scroll\n(MO)",
+    tooltip: "Temporarily switch the joystick to Scroll mode while held",
+    keycode: Keycode.SP_JOY_SCROLL_MO,
+    webCodes: [],
+    category: "Special",
+  },
 ]
 
 export function getSpecialKeycodes(numLayers: number) {
@@ -217,6 +224,7 @@ export function getSpecialKeycodes(numLayers: number) {
     ...[...Array(numLayers)].map((_, i) => MO(i)),
     Keycode.SP_LAYER_LOCK,
     Keycode.SP_JOY_MODE_NEXT,
+    Keycode.SP_JOY_SCROLL_MO,
     Keycode.SP_BOOT,
   ]
 }

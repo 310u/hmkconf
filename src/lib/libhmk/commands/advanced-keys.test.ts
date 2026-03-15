@@ -78,8 +78,7 @@ describe("advanced-keys commands", () => {
     expect(mockCommander.sendCommand).toHaveBeenCalled()
 
     // Find the payload passed to sendCommand
-    const callArgs = vi.mocked(mockCommander.sendCommand).mock
-      .calls[0][0] as any
+    const callArgs = (mockCommander.sendCommand as any).mock.calls[0][0] as any
     const payload = callArgs.payload as number[]
 
     // payload should be [profile, offset, count, ...data]

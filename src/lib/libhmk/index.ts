@@ -13,7 +13,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { uint16Schema } from "$lib/integer"
+import { uint16Schema, uint32Schema } from "$lib/integer"
 import z from "zod"
 
 export const HMK_FIRMWARE_MIN_VERSION = 0x0104
@@ -44,6 +44,7 @@ export const hmkOptionsSchema = z.object({
   saveBottomOutThreshold: z.boolean(),
   highPollingRateEnabled: z.boolean(),
   continuousCalibration: z.boolean(),
+  raw: uint32Schema,
 })
 
 export type HMK_Options = z.infer<typeof hmkOptionsSchema>

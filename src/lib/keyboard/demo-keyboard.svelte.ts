@@ -116,6 +116,7 @@ export class DemoKeyboard implements Keyboard {
       saveBottomOutThreshold: true,
       highPollingRateEnabled: true,
       continuousCalibration: true,
+      raw: 0x0f,
     },
     profiles: [...Array(numProfiles)].map((_, i) =>
       structuredClone(defaultProfile(i)),

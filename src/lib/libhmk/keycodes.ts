@@ -200,6 +200,8 @@ export enum Keycode {
   SP_PROFILE_NEXT = 0xd3,
   SP_BOOT = 0xd4,
   SP_JOY_MODE_NEXT = 0xd5,
+  SP_SNIPER = 0xd6,
+  SP_JOY_SCROLL_MO = 0xd7,
 
   XXXXXXX = KC_NO,
   _______ = KC_TRANSPARENT,
@@ -309,6 +311,7 @@ export enum Keycode {
   PF_SWAP = SP_PROFILE_SWAP,
   PF_NEXT = SP_PROFILE_NEXT,
   JY_NEXT = SP_JOY_MODE_NEXT,
+  JY_SCROLL_MO = SP_JOY_SCROLL_MO,
 
   // Advanced key keycodes (for UI only)
   AK_NULL_BIND_PRIMARY = 0x100,
