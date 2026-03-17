@@ -133,6 +133,9 @@ export class DemoKeyboard implements Keyboard {
   async analogInfo() {
     return Array(numKeys).fill({ adcValue: 0, distance: 0 })
   }
+  async rawAnalogInfo() {
+    return Array(numKeys).fill({ adcValue: 0, distance: 0 })
+  }
   async getCalibration() {
     return {
       initialRestValue: (1 << adcResolution) - 1,

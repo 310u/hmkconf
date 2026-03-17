@@ -44,7 +44,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
     if (!polling) return
     try {
       lastError = ""
-      const batch = await keyboard.analogInfo()
+      const batch = await keyboard.rawAnalogInfo()
       if (batch && batch.length > 0) {
         analogData = batch
       }

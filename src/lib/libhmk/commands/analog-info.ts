@@ -26,9 +26,10 @@ export const hmkAnalogInfoSchema = z.object({
 
 export type HMK_AnalogInfo = z.infer<typeof hmkAnalogInfoSchema>
 
-export async function analogInfo(
+async function readAnalogInfo(
   commander: Commander,
   metadata: KeyboardMetadata,
+  command: HMK_Command,
 ): Promise<HMK_AnalogInfo[]> {
   const numKeys = metadata.numKeys
   const results: HMK_AnalogInfo[] = []
@@ -36,7 +37,7 @@ export async function analogInfo(
   for (let offset = 0; offset < numKeys; offset += 21) {
     const reader = new DataViewReader(
       await commander.sendCommand({
-        command: HMK_Command.ANALOG_INFO,
+        command,
         payload: [offset],
       }),
     )
@@ -52,4 +53,23 @@ export async function analogInfo(
 
   console.log("analogInfo fetched results:", results.length)
   return results
+}
+
+export async function analogInfo(
+  commander: Commander,
+  metadata: KeyboardMetadata,
+): Promise<HMK_AnalogInfo[]> {
+  return readAnalogInfo(commander, metadata, HMK_Command.ANALOG_INFO)
+}
+
+export async function rawAnalogInfo(
+  commander: Commander,
+  metadata: KeyboardMetadata,
+): Promise<HMK_AnalogInfo[]> {
+  try {
+    return await readAnalogInfo(commander, metadata, HMK_Command.ANALOG_INFO_RAW)
+  } catch {
+    // Older firmware only exposes the filtered analog info command.
+    return readAnalogInfo(commander, metadata, HMK_Command.ANALOG_INFO)
+  }
 }

@@ -80,6 +80,7 @@ export type KeyboardAction = {
   factoryReset(): Promise<void>
   recalibrate(): Promise<void>
   analogInfo(): Promise<HMK_AnalogInfo[]>
+  rawAnalogInfo(): Promise<HMK_AnalogInfo[]>
   getCalibration(): Promise<HMK_Calibration>
   setCalibration(params: SetCalibrationParams): Promise<void>
   getProfile(): Promise<number>

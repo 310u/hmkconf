@@ -187,8 +187,8 @@ export const specialKeycodeMetadata: KeycodeMetadata[] = [
     category: "Special",
   },
   {
-    name: "Joystick\nMode",
-    tooltip: "Cycle through Joystick Modes (Mouse, XInput, Scroll, etc.)",
+    name: "Joy Scroll\n(TG)",
+    tooltip: "Toggle the joystick between Mouse mode and Scroll mode",
     keycode: Keycode.SP_JOY_MODE_NEXT,
     webCodes: [],
     category: "Special",
