@@ -6,8 +6,9 @@ This configurator allows you to customize your Hall-effect keyboard's settings i
 
 ## Features
 
-- **Real-time Configuration**: Instantly apply settings via WebUSB (no driver installation required).
-- **Desktop Application (Tauri)** (Experimental): Run `hmkconf` as a native desktop application. _Note: WebUSB support in Tauri currently requires workarounds due to WebKit/Webview2 limitations._
+- **Real-time Configuration**: Instantly apply settings over raw HID with no recompilation or reflashing.
+- **Desktop Application (Electron)**: Run `hmkconf` as a local desktop app while keeping the existing WebHID-based configurator logic.
+- **Desktop Application (Tauri)** (Experimental): Legacy shell kept in-tree, but Electron is the practical desktop target right now.
 - **Keymap Management**: Map standard keycodes, advanced macros, and combos across multiple layers.
 - **Advanced Analog Settings**:
   - **Actuation Point**: Customize the exact travel distance required to actuate each key.
@@ -30,9 +31,8 @@ This configurator allows you to customize your Hall-effect keyboard's settings i
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/en/) (v18 or newer recommended)
 - [bun](https://bun.sh/) (JavaScript runtime and package manager)
-- (For Desktop App only) [Rust & Cargo](https://rustup.rs/)
+- (For Tauri only) [Rust & Cargo](https://rustup.rs/)
 
 ## Getting Started (Web Version)
 
@@ -48,11 +48,66 @@ bun install
 bun dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in a Chromium-based browser (Chrome, Edge, Brave) to use the WebUSB connection.
+Open [http://localhost:5173](http://localhost:5173) in a Chromium-based browser (Chrome, Edge, Brave) to use the WebHID connection.
 
-## Building the Desktop Application
+## Running the Desktop Application
 
-The desktop application is built using [Tauri](https://tauri.app/), providing a native window without browser limitations.
+The recommended desktop target is Electron because it ships Chromium and can use the same `navigator.hid` code path as the browser version.
+
+1. Install the dependencies:
+
+```bash
+bun install
+```
+
+2. Run the desktop app in development mode:
+
+```bash
+bun run desktop:dev
+```
+
+3. Build the frontend and launch the static app locally inside Electron:
+
+```bash
+bun run desktop
+```
+
+`desktop:dev` starts Vite and Electron together. `desktop` loads the static `build/` output inside Electron.
+
+If Linux/Wayland emits Chromium warnings on shutdown, you can force X11 for the desktop shell:
+
+```bash
+HMKCONF_LINUX_BACKEND=x11 bun run desktop:dev
+```
+
+## Building Desktop Packages
+
+For local packaging, build on the target OS:
+
+```bash
+bun run desktop:dist:linux
+bun run desktop:dist:win
+bun run desktop:dist:mac
+```
+
+These commands write artifacts to `dist-electron/`.
+
+- Linux: AppImage
+- Windows: NSIS installer
+- macOS: DMG
+
+Windows and macOS builds are unsigned by default, so SmartScreen or Gatekeeper warnings are expected until you add signing.
+
+## GitHub Actions Releases
+
+[`release.yml`](./.github/workflows/release.yml) builds Linux, Windows, and macOS desktop packages on GitHub Actions.
+
+- `workflow_dispatch`: builds all 3 OS packages and uploads them as workflow artifacts.
+- `push` on `v*` tags: builds all 3 OS packages and publishes them to a GitHub Release.
+
+## Tauri Status
+
+The in-tree Tauri project is still experimental and is not the recommended distribution target right now.
 
 1. Ensure dependencies are installed:
 
@@ -76,12 +131,13 @@ The compiled binaries will be located in the `src-tauri/target/release/bundle/` 
 
 ## Known Limitations
 
-- **Tauri Desktop App (Non-functional)**: The current desktop implementation using Tauri is **experimental and not yet working**. Native WebUSB support in Tauri's webview is limited, and the required bridge is still in development. Please use the Web version in a supported browser.
-- **Browser Support**: Safari and Firefox do not support WebUSB natively. You **must** use a Chromium-based browser (Chrome, Edge, Brave, etc.) to connect to your keyboard.
-- Background USB polling via WebUSB may occasionally fail or require a page refresh if the device is disconnected abruptly.
+- **Electron Dependencies**: `desktop:dev` and `desktop` require the `electron` dev dependency to be installed locally with `bun install`.
+- **Tauri Desktop App (Experimental)**: The current Tauri shell is still not a complete replacement for the browser/Electron path because it does not yet provide a native HID bridge.
+- **Browser Support**: Safari and Firefox do not support WebHID natively. Use a Chromium-based browser or the Electron desktop app.
+- Background HID polling may occasionally fail or require a reconnect if the device is disconnected abruptly.
 
 
 ## Acknowledgements
 
 - [peppapighs/hmkconf](https://github.com/peppapighs/hmkconf) — Original creator of hmkconf.
-- Built with [SvelteKit](https://kit.svelte.dev/) and [Tauri](https://tauri.app/).
+- Built with [SvelteKit](https://kit.svelte.dev/), [Electron](https://www.electronjs.org/), and [Tauri](https://tauri.app/).

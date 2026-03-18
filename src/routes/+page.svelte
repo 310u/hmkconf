@@ -54,8 +54,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       <div class="mx-auto max-w-2xl text-center">
         <h1 class="text-5xl font-semibold tracking-tight">hmkconf</h1>
         <p class="mt-4 text-lg font-medium text-wrap text-muted-foreground">
-          A web-based configurator for libhmk keyboards. Customize keyboard
-          bindings, adjust actuation points, enable Rapid Trigger, and more.
+          A configurator for libhmk keyboards. Customize bindings, adjust
+          actuation points, enable Rapid Trigger, and connect from Chromium or
+          the local desktop app.
         </p>
         <div class="mt-6 flex items-center justify-center gap-4">
           <Button onclick={() => handleConnect()} size="lg">

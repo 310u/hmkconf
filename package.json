@@ -2,11 +2,23 @@
   "name": "hmkconf",
   "private": true,
   "version": "0.0.1",
+  "productName": "hmkconf",
+  "description": "Desktop configurator for libhmk keyboards.",
+  "author": {
+    "name": "satoyu"
+  },
+  "main": "electron/main.mjs",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "bun run scripts/vite-build.mjs",
     "preview": "vite preview",
+    "desktop:start": "electron .",
+    "desktop:dev": "bun run scripts/electron-dev.mjs",
+    "desktop": "bun run build && bun run desktop:start",
+    "desktop:dist:linux": "bun run build && env -u DEBUG VITEST=1 ELECTRON_BUILDER_CACHE=/tmp/hmkconf-electron-builder-cache XDG_CACHE_HOME=/tmp electron-builder --linux AppImage",
+    "desktop:dist:win": "bun run build && electron-builder --win nsis --publish never",
+    "desktop:dist:mac": "bun run build && electron-builder --mac dmg --publish never",
     "tauri": "tauri",
     "package": "svelte-kit sync && svelte-package && publint",
     "prepublishOnly": "npm run package",
@@ -39,6 +51,8 @@
     "@types/w3c-web-hid": "^1.0.6",
     "bits-ui": "^2.14.4",
     "clsx": "^2.1.1",
+    "electron": "^40.1.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
@@ -67,5 +81,40 @@
     "mode-watcher": "^1.1.0",
     "runed": "^0.37.1",
     "zod": "^4.2.1"
+  },
+  "build": {
+    "appId": "com.hmkconf.app",
+    "productName": "hmkconf",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "build/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "icon": "src-tauri/icons"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "src-tauri/icons/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "src-tauri/icons/icon.icns"
+    },
+    "electronDist": "node_modules/electron/dist",
+    "asar": true,
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
   }
 }
