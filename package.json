@@ -16,7 +16,7 @@
     "desktop:start": "electron .",
     "desktop:dev": "bun run scripts/electron-dev.mjs",
     "desktop": "bun run build && bun run desktop:start",
-    "desktop:dist:linux": "bun run build && env -u DEBUG VITEST=1 ELECTRON_BUILDER_CACHE=/tmp/hmkconf-electron-builder-cache XDG_CACHE_HOME=/tmp electron-builder --linux AppImage",
+    "desktop:dist:linux": "bun run build && env -u DEBUG VITEST=1 ELECTRON_BUILDER_CACHE=/tmp/hmkconf-electron-builder-cache XDG_CACHE_HOME=/tmp electron-builder --linux AppImage --publish never",
     "desktop:dist:win": "bun run build && electron-builder --win nsis --publish never",
     "desktop:dist:mac": "bun run build && electron-builder --mac dmg --publish never",
     "tauri": "tauri",

@@ -27,14 +27,14 @@ jobs:
             label: Windows
             artifact_name: hmkconf-windows
             script: desktop:dist:win
-          - os: macos-13
+          - os: macos-15-intel
             label: macOS
             artifact_name: hmkconf-macos
             script: desktop:dist:mac
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -42,7 +42,7 @@ jobs:
           bun-version: latest
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "lts/*"
 
@@ -53,7 +53,7 @@ jobs:
         run: bun run ${{ matrix.script }}
 
       - name: Upload Desktop Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
@@ -73,7 +73,7 @@ jobs:
 
     steps:
       - name: Download All Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: release-assets
           merge-multiple: true
