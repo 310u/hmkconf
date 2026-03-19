@@ -7,7 +7,10 @@ const repoRoot = path.resolve(scriptDir, "..")
 const confPath = path.resolve(repoRoot, "src/lib/keyboard/metadata.ts")
 let content = fs.readFileSync(confPath, "utf8")
 
-const kbPath = path.resolve(repoRoot, "../libhmk/keyboards/mochiko40he/keyboard.json")
+const kbPath = path.resolve(
+  repoRoot,
+  "../libhmk/keyboards/mochiko40he/keyboard.json",
+)
 const kbJson = JSON.parse(fs.readFileSync(kbPath, "utf8"))
 
 // Generate demoMetadata block
@@ -51,7 +54,10 @@ const modLedIndices = ledMapArray
 const modLedIndicesJson = JSON.stringify(modLedIndices)
 
 // Extract LED coordinates from rgb_coords.h
-const coordsHeaderPath = path.resolve(repoRoot, "../libhmk/include/rgb_coords.h")
+const coordsHeaderPath = path.resolve(
+  repoRoot,
+  "../libhmk/include/rgb_coords.h",
+)
 const coordsHeader = fs.readFileSync(coordsHeaderPath, "utf-8")
 const ledCoords = []
 const coordsBlockMatch = coordsHeader.match(

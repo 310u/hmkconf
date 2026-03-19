@@ -3,7 +3,10 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
-const kbPath = path.resolve(scriptDir, "../../libhmk/keyboards/mochiko40he/keyboard.json")
+const kbPath = path.resolve(
+  scriptDir,
+  "../../libhmk/keyboards/mochiko40he/keyboard.json",
+)
 let kbJson = JSON.parse(fs.readFileSync(kbPath, "utf8"))
 
 // 1. Update num_keys

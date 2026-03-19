@@ -7,21 +7,14 @@
 -->
 
 <script lang="ts">
-  import {
-    ArrowRightIcon,
-    PlusIcon,
-    Trash2Icon,
-    TriangleAlertIcon,
-  } from "@lucide/svelte"
+  import { PlusIcon, Trash2Icon, TriangleAlertIcon } from "@lucide/svelte"
   import FixedScrollArea from "$lib/components/fixed-scroll-area.svelte"
   import KeycodeAccordion from "$lib/components/keycode-accordion.svelte"
   import { KeycodeButton } from "$lib/components/keycode-button"
   import { Button } from "$lib/components/ui/button"
   import * as Select from "$lib/components/ui/select"
   import { macrosQueryContext } from "$lib/configurator/queries/macros-query.svelte"
-  import { displayUInt8 } from "$lib/integer"
   import {
-    HMK_AKType,
     HMK_MacroAction,
     MAX_MACRO_EVENTS,
     NUM_MACROS,
@@ -56,10 +49,6 @@
     value: i,
     label: `Macro ${i + 1}`,
   }))
-
-  const selectedMacroOption = $derived(
-    macroOptions.find((o) => o.value === macroIndex) ?? macroOptions[0],
-  )
 
   function setMacroIndex(index: number) {
     configMenuState.updateAction({
@@ -150,7 +139,7 @@
         Macro {macroIndex + 1}
       </Select.Trigger>
       <Select.Content>
-        {#each macroOptions as option}
+        {#each macroOptions as option (option.value)}
           <Select.Item value={String(option.value)} label={option.label}>
             {option.label}
           </Select.Item>
@@ -204,7 +193,7 @@
         <Button variant="link" onclick={addEvent}>Add an event to start</Button>
       </div>
     {:else}
-      {#each currentMacro.events as event, i}
+      {#each currentMacro.events as event, i (i)}
         <div class="flex items-center gap-2 rounded-md border p-2 text-sm">
           <span class="w-6 text-center text-muted-foreground">{i + 1}</span>
 

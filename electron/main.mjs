@@ -1,14 +1,19 @@
-import { app, BrowserWindow, net, protocol } from "electron"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { app, BrowserWindow, net, protocol } from "electron"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, "..")
 const buildDir = path.join(projectRoot, "build")
 const appScheme = "hmkconf"
 const appOrigin = `${appScheme}://app`
-const linuxIconPath = path.join(projectRoot, "src-tauri", "icons", "128x128.png")
+const linuxIconPath = path.join(
+  projectRoot,
+  "src-tauri",
+  "icons",
+  "128x128.png",
+)
 const devServerUrl = process.env.HMKCONF_DEV_SERVER_URL
 const devServerOrigin = devServerUrl ? new URL(devServerUrl).origin : null
 const linuxBackend = process.env.HMKCONF_LINUX_BACKEND
@@ -40,20 +45,24 @@ function isTrustedOrigin(origin) {
   if (origin.startsWith(appOrigin)) return true
 
   try {
-    return devServerOrigin !== null && new URL(origin).origin === devServerOrigin
+    return (
+      devServerOrigin !== null && new URL(origin).origin === devServerOrigin
+    )
   } catch {
     return false
   }
 }
 
 function configureHidPermissions(session) {
-  session.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-    if (permission === "hid") {
-      return isTrustedOrigin(requestingOrigin)
-    }
+  session.setPermissionCheckHandler(
+    (_webContents, permission, requestingOrigin) => {
+      if (permission === "hid") {
+        return isTrustedOrigin(requestingOrigin)
+      }
 
-    return false
-  })
+      return false
+    },
+  )
 
   session.setDevicePermissionHandler((details) => {
     return details.deviceType === "hid" && isTrustedOrigin(details.origin)
@@ -63,7 +72,10 @@ function configureHidPermissions(session) {
 async function resolveAppRequestPath(requestUrl) {
   const { pathname } = new URL(requestUrl)
   const normalizedPath = pathname === "/" ? "/index.html" : pathname
-  const candidatePath = path.resolve(buildDir, `.${decodeURIComponent(normalizedPath)}`)
+  const candidatePath = path.resolve(
+    buildDir,
+    `.${decodeURIComponent(normalizedPath)}`,
+  )
 
   if (!candidatePath.startsWith(buildDir)) {
     return path.join(buildDir, "index.html")

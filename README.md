@@ -26,7 +26,6 @@ This configurator allows you to customize your Hall-effect keyboard's settings i
   - **Slider Configuration**: Map integrated sliders to volume control or gamepad axes with configurable sensitivity.
   - **Macros & Combos**: Fully graphical interface for recording and editing macro sequences and multi-key combos.
 
-
 - **EEPROM Storage**: Save calibrations and profiles directly to the keyboard's internal flash.
 
 ## Prerequisites
@@ -135,7 +134,6 @@ The compiled binaries will be located in the `src-tauri/target/release/bundle/` 
 - **Tauri Desktop App (Experimental)**: The current Tauri shell is still not a complete replacement for the browser/Electron path because it does not yet provide a native HID bridge.
 - **Browser Support**: Safari and Firefox do not support WebHID natively. Use a Chromium-based browser or the Electron desktop app.
 - Background HID polling may occasionally fail or require a reconnect if the device is disconnected abruptly.
-
 
 ## Acknowledgements
 

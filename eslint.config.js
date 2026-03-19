@@ -39,4 +39,14 @@ export default defineConfig(
       },
     },
   },
+  {
+    files: [
+      "src/lib/libhmk/generated/**/*.ts",
+      "src/lib/libhmk/types.ts",
+      "**/*.test.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 )

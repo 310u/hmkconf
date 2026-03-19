@@ -202,7 +202,10 @@ export class KeyboardConfig {
     }
 
     if (joystickConfig !== undefined && this.#keyboard.setJoystickConfig) {
-      await this.#keyboard.setJoystickConfig({ profile, config: joystickConfig })
+      await this.#keyboard.setJoystickConfig({
+        profile,
+        config: joystickConfig,
+      })
     }
   }
 }

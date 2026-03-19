@@ -47,13 +47,7 @@ export async function setOptions(
   }: SetOptionsParams,
 ) {
   const optionsRaw =
-    (raw &
-      ~(
-        (1 << 0) |
-        (1 << 1) |
-        (1 << 2) |
-        (1 << 3)
-      )) |
+    (raw & ~((1 << 0) | (1 << 1) | (1 << 2) | (1 << 3))) |
     ((xInputEnabled ? 1 : 0) << 0) |
     ((saveBottomOutThreshold ? 1 : 0) << 1) |
     ((highPollingRateEnabled ? 1 : 0) << 2) |

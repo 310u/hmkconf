@@ -23,10 +23,7 @@ import type {
   HMK_JoystickState,
   SetJoystickConfigParams,
 } from "$lib/libhmk/commands/joystick"
-import type {
-  HMK_RgbConfig,
-  SetRgbConfigParams,
-} from "$lib/libhmk/commands/rgb"
+import type { HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
 import type { HMK_GamepadOptions } from "$lib/libhmk/gamepad"
 import { Context } from "runed"
 import type { KeyboardMetadata } from "./metadata"

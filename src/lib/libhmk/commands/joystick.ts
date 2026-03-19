@@ -45,7 +45,7 @@ export async function getJoystickState(
   )
 
   parseCommandOutBuffer(reader, HMK_Command.GET_JOYSTICK_STATE)
-  const profile = reader.uint8()
+  reader.uint8()
   const rawX = reader.uint16()
   const rawY = reader.uint16()
 

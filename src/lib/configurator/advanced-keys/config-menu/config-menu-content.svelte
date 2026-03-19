@@ -14,7 +14,6 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <script lang="ts">
-  import { nullBindBehaviorMetadata } from "$lib/configurator/lib/advanced-keys"
   import { HMK_AKType, type HMK_AdvancedKey } from "$lib/libhmk/advanced-keys"
   import { cn, type WithoutChildren } from "$lib/utils"
   import type { HTMLAttributes } from "svelte/elements"

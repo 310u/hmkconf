@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button"
-  import { Label } from "$lib/components/ui/label"
   import * as Select from "$lib/components/ui/select"
   import { Slider } from "$lib/components/ui/slider"
   import { keyboardContext, type Keyboard } from "$lib/keyboard"
@@ -36,7 +35,8 @@
     let active = true
     let pollTimeout: number | null = null
 
-    keyboard.getJoystickConfig?.({ profile })
+    keyboard
+      .getJoystickConfig?.({ profile })
       .then((c) => {
         if (!active) return
         config = c
@@ -54,14 +54,11 @@
         if (keyboard.getJoystickState) {
           joystickState = await keyboard.getJoystickState()
         }
-      } catch (e) {
+      } catch {
         // ignore disconnects
       }
       if (active) {
-        pollTimeout = window.setTimeout(
-          pollState,
-          JOYSTICK_STATE_POLL_INTERVAL,
-        )
+        pollTimeout = window.setTimeout(pollState, JOYSTICK_STATE_POLL_INTERVAL)
       }
     }
     pollState()

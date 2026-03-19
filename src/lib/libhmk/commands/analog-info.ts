@@ -67,7 +67,11 @@ export async function rawAnalogInfo(
   metadata: KeyboardMetadata,
 ): Promise<HMK_AnalogInfo[]> {
   try {
-    return await readAnalogInfo(commander, metadata, HMK_Command.ANALOG_INFO_RAW)
+    return await readAnalogInfo(
+      commander,
+      metadata,
+      HMK_Command.ANALOG_INFO_RAW,
+    )
   } catch {
     // Older firmware only exposes the filtered analog info command.
     return readAnalogInfo(commander, metadata, HMK_Command.ANALOG_INFO)

@@ -5,7 +5,13 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url))
-const electronBinary = path.join(projectRoot, "node_modules", "electron", "dist", "electron")
+const electronBinary = path.join(
+  projectRoot,
+  "node_modules",
+  "electron",
+  "dist",
+  "electron",
+)
 const viteBinary = path.join(projectRoot, "node_modules", ".bin", "vite")
 const nodeShimDir = mkdtempSync(path.join(tmpdir(), "hmkconf-node-"))
 const nodeShimPath = path.join(nodeShimDir, "node")

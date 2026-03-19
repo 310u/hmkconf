@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url"
 import { createServer } from "vite"
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url))
-const devServerUrl = process.env.HMKCONF_DEV_SERVER_URL ?? "http://127.0.0.1:5173"
+const devServerUrl =
+  process.env.HMKCONF_DEV_SERVER_URL ?? "http://127.0.0.1:5173"
 const { hostname, port, protocol } = new URL(devServerUrl)
 const targetPort = Number(port || (protocol === "https:" ? "443" : "80"))
 

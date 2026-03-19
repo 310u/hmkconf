@@ -118,7 +118,7 @@
   <div class="grid place-items-center text-base">
     <div class="flex items-center gap-2">
       <div class="flex items-center gap-1">
-        {#each action.keys as key}
+        {#each action.keys as key, i (i)}
           {#if key !== 255 && keymap}
             <div class="p-0.5" style={unitToStyle()}>
               <KeycodeButton keycode={keymap[layer][key]} tabindex={-1} />

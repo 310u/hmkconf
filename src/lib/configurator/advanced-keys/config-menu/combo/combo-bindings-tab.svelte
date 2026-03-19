@@ -21,11 +21,9 @@
 -->
 
 <script lang="ts">
-  import FixedScrollArea from "$lib/components/fixed-scroll-area.svelte"
   import KeycodeAccordion from "$lib/components/keycode-accordion.svelte"
   import type { HMK_AKCombo } from "$lib/libhmk/advanced-keys"
   import type { ComponentProps } from "svelte"
-  import type { HTMLAttributes } from "svelte/elements"
   import { configMenuStateContext } from "../context.svelte"
   import { comboConfigMenuStateContext } from "./context.svelte"
 

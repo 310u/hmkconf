@@ -44,7 +44,6 @@ import type {
   ResetProfileParams,
   SetActuationMapParams,
   SetAdvancedKeysParams,
-  SetCalibrationParams,
   SetGamepadButtonsParams,
   SetGamepadOptionsParams,
   SetKeymapParams,
@@ -123,13 +122,13 @@ export class DemoKeyboard implements Keyboard {
     ),
   }
 
-  async disconnect() { }
-  async forget() { }
+  async disconnect() {}
+  async forget() {}
 
-  async reboot() { }
-  async bootloader() { }
-  async factoryReset() { }
-  async recalibrate() { }
+  async reboot() {}
+  async bootloader() {}
+  async factoryReset() {}
+  async recalibrate() {}
   async analogInfo() {
     return Array(numKeys).fill({ adcValue: 0, distance: 0 })
   }
@@ -142,7 +141,7 @@ export class DemoKeyboard implements Keyboard {
       initialBottomOutThreshold: (1 << adcResolution) - 1,
     }
   }
-  async setCalibration() { }
+  async setCalibration() {}
   async getProfile() {
     return 0
   }
@@ -228,9 +227,10 @@ export class DemoKeyboard implements Keyboard {
   async getJoystickState(): Promise<HMK_JoystickState> {
     return { rawX: 2048, rawY: 2048, outX: 0, outY: 0, sw: false }
   }
-  async getJoystickConfig({
-    profile,
-  }: GetJoystickConfigParams): Promise<HMK_JoystickConfig> {
+  async getJoystickConfig(
+    params: GetJoystickConfigParams,
+  ): Promise<HMK_JoystickConfig> {
+    void params
     // Return dummy defaults
     return {
       x: { min: 0, center: 2048, max: 4095 },
@@ -242,10 +242,8 @@ export class DemoKeyboard implements Keyboard {
       swDebounceMs: 5,
     }
   }
-  async setJoystickConfig({
-    profile,
-    config,
-  }: SetJoystickConfigParams): Promise<void> {
+  async setJoystickConfig(params: SetJoystickConfigParams): Promise<void> {
+    void params
     // No-op for demo
   }
 }

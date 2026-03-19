@@ -19,7 +19,6 @@
 -->
 
 <script lang="ts">
-  import FixedScrollArea from "$lib/components/fixed-scroll-area.svelte"
   import { Input } from "$lib/components/ui/input"
   import { Label } from "$lib/components/ui/label"
   import type { HMK_AKCombo } from "$lib/libhmk/advanced-keys"

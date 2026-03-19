@@ -19,12 +19,17 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import { Button } from "$lib/components/ui/button"
   import { keyboardContext } from "$lib/keyboard"
   import type { HMK_AnalogInfo } from "$lib/libhmk/commands"
+  import { type WithoutChildren } from "$lib/utils"
   import { onDestroy } from "svelte"
+  import type { HTMLAttributes } from "svelte/elements"
   import { globalStateContext } from "../context.svelte"
 
   const DIAGNOSTICS_POLL_INTERVAL = 1000 / 30
 
-  let { class: className, ...props }: any = $props()
+  let {
+    class: className,
+    ...props
+  }: WithoutChildren<HTMLAttributes<HTMLDivElement>> = $props()
 
   const keyboard = keyboardContext.get()
   const { numKeys, adcResolution } = keyboard.metadata
@@ -48,9 +53,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       if (batch && batch.length > 0) {
         analogData = batch
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Failed to poll analog info, retrying...", e)
-      lastError = String(e.message || e)
+      lastError = e instanceof Error ? e.message : String(e)
     }
 
     if (polling) {
@@ -119,7 +124,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       {/if}
     </div>
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-      {#each analogData as data, i}
+      {#each analogData as data, i (i)}
         <div class="flex flex-col gap-1 rounded border bg-card p-3 shadow-sm">
           <div class="flex items-center justify-between text-xs font-medium">
             <span class="text-foreground/80">Key {i}</span>

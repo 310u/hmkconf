@@ -3,7 +3,6 @@
   import { KeyButton } from "$lib/components/key-button"
   import { KeyboardEditorKeyboard } from "$lib/components/keyboard-editor"
   import Switch from "$lib/components/switch.svelte"
-  import { Label } from "$lib/components/ui/label"
   import * as Select from "$lib/components/ui/select"
   import { Slider } from "$lib/components/ui/slider"
   import { keyboardContext, type Keyboard } from "$lib/keyboard"
@@ -32,7 +31,8 @@
     if (tab !== "rgb") return
 
     loading = true
-    keyboard.getRgbConfig?.({ profile })
+    keyboard
+      .getRgbConfig?.({ profile })
       .then((config) => {
         rgbConfig = config
       })
@@ -57,7 +57,7 @@
       rgbConfig.currentEffect === RGB_EFFECT_PER_KEY &&
       selectedKeyIndex !== null
     ) {
-      const ledIndex = keyToLedIndex.get(selectedKeyIndex)
+      const ledIndex = ledIndexByKey[selectedKeyIndex]
       if (ledIndex !== undefined) {
         const newPerKeyColors = [...rgbConfig.perKeyColors]
         newPerKeyColors[ledIndex] = newSolidColor
@@ -69,7 +69,7 @@
 
   function handleKeyClick(keyIndex: number) {
     if (!rgbConfig) return
-    const ledIndex = keyToLedIndex.get(keyIndex)
+    const ledIndex = ledIndexByKey[keyIndex]
     if (
       ledIndex !== undefined &&
       rgbConfig.currentEffect !== RGB_EFFECT_PER_KEY
@@ -183,12 +183,12 @@
     { value: "51", label: "Analog Keypress" },
     { value: "52", label: "Per-Key / Static" },
   ]
-  const keyToLedIndex = $derived.by(() => {
-    const map = new Map<number, number>()
+  const ledIndexByKey = $derived.by(() => {
+    const indices = Array<number | undefined>(metadata.numKeys).fill(undefined)
     metadata.ledMap?.forEach((keyIndex: number, ledIndex: number) => {
-      map.set(keyIndex, ledIndex)
+      indices[keyIndex] = ledIndex
     })
-    return map
+    return indices
   })
 
   // Animation State
@@ -420,7 +420,6 @@
         }
         if (rgbConfig.currentEffect === 33) {
           const max = rgbConfig.globalBrightness
-          const pureGreen = (max * 3) >> 2
           const decayTicks = Math.max(1, Math.floor(255 / Math.max(1, max)))
           previewDigitalDecay += 1
           const next = [...previewDigitalRain]
@@ -605,7 +604,7 @@
 
   function getLedColor(keyIndex: number) {
     if (!rgbConfig || !rgbConfig.enabled) return "hsl(var(--muted))"
-    const ledIndex = keyToLedIndex.get(keyIndex)
+    const ledIndex = ledIndexByKey[keyIndex]
     if (ledIndex === undefined) return "transparent"
 
     const effect = rgbConfig.currentEffect
@@ -1131,9 +1130,7 @@
       {/if}
 
       <!-- Secondary Color Picker (for dual-color effects) -->
-      {#if [2, 16, 20, 48, 49, RGB_EFFECT_ANALOG].includes(
-        rgbConfig.currentEffect,
-      )}
+      {#if [2, 16, 20, 48, 49, RGB_EFFECT_ANALOG].includes(rgbConfig.currentEffect)}
         <div class="flex flex-col gap-2">
           <div class="grid text-sm text-wrap">
             <span class="font-semibold"
@@ -1141,7 +1138,7 @@
                 ? "Alpha Color"
                 : rgbConfig.currentEffect === RGB_EFFECT_ANALOG
                   ? "Base Color"
-                : "Secondary Color"}</span
+                  : "Secondary Color"}</span
             >
           </div>
           <div class="flex flex-col gap-3 rounded-md border p-4">
