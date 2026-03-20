@@ -84,6 +84,8 @@
     { value: "2", label: "XInput Left Stick" },
     { value: "3", label: "XInput Right Stick" },
     { value: "4", label: "Scroll" },
+    { value: "5", label: "Cursor 4-way" },
+    { value: "6", label: "Cursor 8-way" },
   ]
 
   // Calibration logic
