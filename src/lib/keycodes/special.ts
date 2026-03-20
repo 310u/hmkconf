@@ -208,6 +208,21 @@ export const specialKeycodeMetadata: KeycodeMetadata[] = [
     category: "Special",
   },
   {
+    name: "RGB Fx\nNext",
+    tooltip: "Switch to the next RGB lighting effect for the current profile",
+    keycode: Keycode.SP_RGB_EFFECT_NEXT,
+    webCodes: [],
+    category: "Special",
+  },
+  {
+    name: "RGB Fx\nPrev",
+    tooltip:
+      "Switch to the previous RGB lighting effect for the current profile",
+    keycode: Keycode.SP_RGB_EFFECT_PREV,
+    webCodes: [],
+    category: "Special",
+  },
+  {
     name: "RGB Bri\nUp",
     tooltip: "Increase RGB brightness for the current profile",
     display: [SunIcon],
@@ -256,6 +271,8 @@ export function getSpecialKeycodes(numLayers: number) {
     Keycode.SP_JOY_MODE_NEXT,
     Keycode.SP_JOY_SCROLL_MO,
     Keycode.SP_RGB_TOGGLE,
+    Keycode.SP_RGB_EFFECT_NEXT,
+    Keycode.SP_RGB_EFFECT_PREV,
     Keycode.SP_RGB_BRIGHTNESS_UP,
     Keycode.SP_RGB_BRIGHTNESS_DOWN,
     Keycode.SP_POLL_RATE_TOGGLE,
