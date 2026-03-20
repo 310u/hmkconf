@@ -13,29 +13,94 @@ const kbPath = path.resolve(
 )
 const kbJson = JSON.parse(fs.readFileSync(kbPath, "utf8"))
 
+const DEMO_ENCODER_LAYER_KEYCODES = [
+  ["KC_AUDIO_VOL_UP", "KC_AUDIO_VOL_DOWN"],
+  ["KC_PGUP", "KC_PGDN"],
+  ["KC_HOME", "KC_END"],
+  ["KC_LEFT", "KC_RIGHT"],
+]
+
+const visibleNumKeys = kbJson.keyboard.num_keys
+const baseEncoderMapArray = kbJson.encoder?.map || []
+const useSyntheticDemoEncoder = baseEncoderMapArray.length === 0
+const encoderMapArray = useSyntheticDemoEncoder
+  ? [
+      {
+        label: "Demo Encoder",
+        cw: visibleNumKeys,
+        ccw: visibleNumKeys + 1,
+      },
+    ]
+  : baseEncoderMapArray
+const demoNumKeys = useSyntheticDemoEncoder
+  ? visibleNumKeys + encoderMapArray.length * 2
+  : visibleNumKeys
+
+const baseKeymap = kbJson.keymap || []
+const defaultKeymapArray = baseKeymap.map((layer, layerIndex) => {
+  if (!Array.isArray(layer)) {
+    throw new Error(`keymap layer ${layerIndex} is not an array`)
+  }
+  if (layer.length !== visibleNumKeys) {
+    throw new Error(
+      `keymap layer ${layerIndex} length ${layer.length} does not match keyboard.num_keys ${visibleNumKeys}`,
+    )
+  }
+
+  if (!useSyntheticDemoEncoder) {
+    return [...layer]
+  }
+
+  const encoderBindings =
+    DEMO_ENCODER_LAYER_KEYCODES[layerIndex % DEMO_ENCODER_LAYER_KEYCODES.length]
+  return [...layer, ...encoderBindings]
+})
+const defaultKeymapsJson = JSON.stringify(
+  Array.from(
+    { length: kbJson.keyboard.num_profiles },
+    () => defaultKeymapArray,
+  ),
+  null,
+  2,
+)
+
 // Generate demoMetadata block
 const layoutJson = JSON.stringify(kbJson.layout, null, 2)
 
-// Extract analog keys
-const analogKeys = new Set()
-if (kbJson.analog.mux && kbJson.analog.mux.matrix) {
-  kbJson.analog.mux.matrix.flat().forEach((k) => analogKeys.add(k))
-}
-if (kbJson.analog.raw && kbJson.analog.raw.vector) {
-  kbJson.analog.raw.vector.forEach((k) => analogKeys.add(k))
-}
-// Remove KC_NO (if 255 or 0 is used as placeholder, but usually they are valid indices)
-// For mochiko40he, keys are 0-39 for analog. 40 is digital joystick sw.
-const analogKeysArray = Array.from(analogKeys)
-  .filter((k) => Number.isInteger(k) && k >= 0 && k < kbJson.keyboard.num_keys)
+// Derive visible analog Hall-effect keys for the demo layout.
+// The demo keeps the joystick switch visible, but encoder actions stay hidden.
+const visibleLayoutKeys = kbJson.layout.keymap
+  .flat()
+  .map(({ key }) => key)
+  .filter((key) => Number.isInteger(key))
+const analogKeysArray = Array.from(new Set(visibleLayoutKeys))
+  .filter((key) => key >= 0 && key < visibleNumKeys - 1)
   .sort((a, b) => a - b)
 const analogKeysJson = JSON.stringify(analogKeysArray)
+const encoderKeysArray = encoderMapArray.flatMap((encoder, encoderIndex) => {
+  const label = encoder.label ?? `Encoder ${encoderIndex + 1}`
+  return [
+    {
+      key: encoder.cw,
+      encoder: encoderIndex,
+      direction: "cw",
+      label: `${label} Clockwise`,
+    },
+    {
+      key: encoder.ccw,
+      encoder: encoderIndex,
+      direction: "ccw",
+      label: `${label} Counterclockwise`,
+    },
+  ]
+})
+const encoderKeysJson = JSON.stringify(encoderKeysArray)
 
 // Extract LED map
 const ledMapArray = kbJson.rgb?.led_map || []
 const ledMapJson = JSON.stringify(ledMapArray)
 const modKeysArray = kbJson.rgb?.mod_keys || []
-const numKeys = kbJson.keyboard?.num_keys ?? 0
+const numKeys = visibleNumKeys
 const ledMapSet = new Set(ledMapArray)
 for (const keyIndex of modKeysArray) {
   if (!Number.isInteger(keyIndex) || keyIndex < 0 || keyIndex >= numKeys) {
@@ -96,7 +161,7 @@ if (parseStart !== -1) {
   const numLayers = kbJson.keyboard.num_layers || 4
   const numAdvancedKeys = kbJson.keyboard.num_advanced_keys || 32
   const newBlock = `export const demoMetadata = keyboardMetadataSchema.parse({
-  name: "Mochiko40HE",
+  name: "Mochiko40HE Demo",
   vendorId: "0x0108",
   productId: "0x0111",
   usbHighSpeed: true,
@@ -104,20 +169,22 @@ if (parseStart !== -1) {
   adcResolution: 12,
   numProfiles: ${numProfiles},
   numLayers: ${numLayers},
-  numKeys: ${kbJson.keyboard.num_keys},
+  numKeys: ${demoNumKeys},
   numAdvancedKeys: ${numAdvancedKeys},
 
   features: {
-    rgb: true,
-    joystick: true,
+    rgb: ${kbJson.features?.rgb === true ? "true" : "false"},
+    joystick: ${kbJson.features?.joystick === true ? "true" : "false"},
+    encoder: ${encoderMapArray.length > 0 ? "true" : "false"},
   },
 
   layout: ${layoutJson},
   analogKeys: ${analogKeysJson},
+  encoderKeys: ${encoderKeysJson},
   ledMap: ${ledMapJson},
   ledCoords: ${ledCoordsJson},
   modLedIndices: ${modLedIndicesJson},
-  defaultKeymaps: [...Array(${numProfiles})].map(() => [...Array(${numLayers})].map(() => Array(${kbJson.keyboard.num_keys}).fill("KC_NO"))),
+  defaultKeymaps: ${defaultKeymapsJson},
 })`
   content = `${content.slice(0, parseStart)}${newBlock}${content.slice(parseEnd + 1)}`
   fs.writeFileSync(confPath, content)

@@ -65,6 +65,19 @@ type DemoKeyboardProfileState = {
   gamepadOptions: HMK_GamepadOptions
   tickRate: number
   rgbConfig: HMK_RgbConfig
+  joystickConfig: HMK_JoystickConfig
+}
+
+function defaultJoystickConfig(): HMK_JoystickConfig {
+  return {
+    x: { min: 0, center: 2048, max: 4095 },
+    y: { min: 0, center: 2048, max: 4095 },
+    deadzone: 150,
+    mode: 0,
+    mouseSpeed: 10,
+    mouseAcceleration: 255,
+    swDebounceMs: 5,
+  }
 }
 
 function defaultProfile(profile: number): DemoKeyboardProfileState {
@@ -95,6 +108,7 @@ function defaultProfile(profile: number): DemoKeyboardProfileState {
       layerColors: Array(demoMetadata.numLayers).fill({ r: 0, g: 0, b: 0 }),
       perKeyColors: Array(numKeys).fill({ r: 255, g: 0, b: 0 }),
     },
+    joystickConfig: defaultJoystickConfig(),
   }
 }
 
@@ -230,20 +244,9 @@ export class DemoKeyboard implements Keyboard {
   async getJoystickConfig(
     params: GetJoystickConfigParams,
   ): Promise<HMK_JoystickConfig> {
-    void params
-    // Return dummy defaults
-    return {
-      x: { min: 0, center: 2048, max: 4095 },
-      y: { min: 0, center: 2048, max: 4095 },
-      deadzone: 150,
-      mode: 0,
-      mouseSpeed: 10,
-      mouseAcceleration: 255,
-      swDebounceMs: 5,
-    }
+    return this.#state.profiles[params.profile].joystickConfig
   }
   async setJoystickConfig(params: SetJoystickConfigParams): Promise<void> {
-    void params
-    // No-op for demo
+    this.#state.profiles[params.profile].joystickConfig = params.config
   }
 }

@@ -20,11 +20,12 @@ This configurator allows you to customize your Hall-effect keyboard's settings i
 - **Hardware Integrations (Fork additions)**:
 
   > [!WARNING]
-  > Hardware features like **Joystick Support**, **Slider Support**, and **RGB Lighting** have been implemented in the firmware and web UI but are not yet fully tested on physical hardware.
+  > Hardware features like **Joystick Support**, **Rotary Encoder Support**, and **RGB Lighting** are wired into the firmware and configurator, but are not yet fully tested on physical hardware. Slider support exists on the firmware side, but `hmkconf` does not yet have a dedicated slider tab.
   - **Analog RGB**: Select from 50+ animated, reactive, and static effects, including **Depth-Reactive** modes. Tweak speed, brightness, and set per-key colors.
   - **Joystick / Gamepad Mode**: Configure analog stick deadzones, calibration, mouse sensitivity, and XInput routing.
-  - **Slider Configuration**: Map integrated sliders to volume control or gamepad axes with configurable sensitivity.
+  - **Rotary Encoder Remap**: Configure per-layer clockwise and counterclockwise bindings when the firmware exposes encoder directions as virtual keys through `keyboard.json.encoder.map`.
   - **Macros & Combos**: Fully graphical interface for recording and editing macro sequences and multi-key combos.
+  - **Bundled Demo Keyboard**: Use `/demo` to inspect the current configurator tabs, including RGB, joystick, and encoder flows, without attaching hardware.
 
 - **EEPROM Storage**: Save calibrations and profiles directly to the keyboard's internal flash.
 
@@ -48,6 +49,19 @@ bun dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in a Chromium-based browser (Chrome, Edge, Brave) to use the WebHID connection.
+
+## Demo Mode
+
+For UI verification without hardware, open [http://localhost:5173/demo](http://localhost:5173/demo).
+
+The bundled demo keyboard is a synthetic `Mochiko40HE Demo` profile that exposes the currently implemented configurator tabs in one place:
+
+- RGB
+- Joystick
+- Rotary encoder remap
+- Keymap / performance / advanced keys / gamepad / calibration
+
+The demo encoder uses hidden virtual keys, matching the same `keyboard.json.encoder.map` model that real `libhmk` firmware uses for `hmkconf` remapping.
 
 ## Running the Desktop Application
 
@@ -133,6 +147,8 @@ The compiled binaries will be located in the `src-tauri/target/release/bundle/` 
 - **Electron Dependencies**: `desktop:dev` and `desktop` require the `electron` dev dependency to be installed locally with `bun install`.
 - **Tauri Desktop App (Experimental)**: The current Tauri shell is still not a complete replacement for the browser/Electron path because it does not yet provide a native HID bridge.
 - **Browser Support**: Safari and Firefox do not support WebHID natively. Use a Chromium-based browser or the Electron desktop app.
+- **Slider UI**: Slider support exists in `libhmk`, but `hmkconf` does not yet provide a dedicated slider configuration screen.
+- **Encoder Metadata Dependency**: The encoder tab only appears when firmware metadata exposes encoder directions as virtual keys.
 - Background HID polling may occasionally fail or require a reconnect if the device is disconnected abruptly.
 
 ## Acknowledgements

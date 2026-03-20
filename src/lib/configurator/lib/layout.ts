@@ -21,6 +21,7 @@ import {
   Grid2X2Icon,
   PaletteIcon,
   PencilIcon,
+  RotateCwIcon,
   SettingsIcon,
   SquareChevronUpIcon,
 } from "@lucide/svelte"
@@ -68,6 +69,14 @@ export function getSidebarTabGroups(
       label: "Joystick",
       value: "joystick",
       icon: CrosshairIcon, // Reusing CrosshairIcon for Joystick. Or Gamepad2Icon.
+    })
+  }
+
+  if (metadata.features.encoder) {
+    keyboardTabs.push({
+      label: "Encoder",
+      value: "encoder",
+      icon: RotateCwIcon,
     })
   }
 

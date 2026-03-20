@@ -39,6 +39,24 @@ export const remapStateContext = new Context<ConfiguratorRemapState>(
   "hmk-remap-state",
 )
 
+export class ConfiguratorEncoderState {
+  layer = $state(0)
+  key: number | null = $state(null)
+
+  reset() {
+    this.layer = 0
+    this.key = null
+  }
+  setLayer(layer: number) {
+    this.layer = layer
+    this.key = null
+  }
+}
+
+export const encoderStateContext = new Context<ConfiguratorEncoderState>(
+  "hmk-encoder-state",
+)
+
 export class ConfiguratorPerformanceState {
   keys = new SvelteSet<number>()
   showKeymap = $state(false)
@@ -132,6 +150,7 @@ export const gamepadStateContext = new Context<ConfiguratorGamepadState>(
 export type ConfiguratorTabs =
   | "profiles"
   | "remap"
+  | "encoder"
   | "performance"
   | "advanced-keys"
   | "gamepad"
@@ -146,12 +165,14 @@ export class ConfiguratorGlobalState {
   profile = $state(0)
 
   #remapState: ConfiguratorRemapState
+  #encoderState: ConfiguratorEncoderState
   #performanceState: ConfiguratorPerformanceState
   #advancedKeysState: ConfiguratorAdvancedKeysState
   #gamepadState: ConfiguratorGamepadState
 
   constructor() {
     this.#remapState = remapStateContext.get()
+    this.#encoderState = encoderStateContext.get()
     this.#performanceState = performanceStateContext.get()
     this.#advancedKeysState = advancedKeysStateContext.get()
     this.#gamepadState = gamepadStateContext.get()
@@ -160,6 +181,7 @@ export class ConfiguratorGlobalState {
   setProfile(profile: number) {
     this.profile = profile
     this.#remapState.reset()
+    this.#encoderState.reset()
     this.#performanceState.reset()
     this.#advancedKeysState.reset()
     this.#gamepadState.reset()
@@ -304,6 +326,7 @@ export const displayLayoutContext = new Context<DisplayLayout>(
 
 export function setConfiguratorStateContext() {
   remapStateContext.set(new ConfiguratorRemapState())
+  encoderStateContext.set(new ConfiguratorEncoderState())
   performanceStateContext.set(new ConfiguratorPerformanceState())
   advancedKeysStateContext.set(new ConfiguratorAdvancedKeysState())
   gamepadStateContext.set(new ConfiguratorGamepadState())

@@ -32,6 +32,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   const diagnosticsTab = import("./diagnostics/diagnostics-menu.svelte")
   const rgbTab = import("./rgb/rgb-tab.svelte")
   const joystickTab = import("./joystick/joystick-tab.svelte")
+  const encoderTab = import("./encoder/encoder-tab.svelte")
 
   // svelte-ignore state_referenced_locally
   keyboardContext.set(keyboard)
@@ -96,6 +97,15 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       <Tabs.Content value="joystick">
         {#snippet child({ props })}
           <JoystickTab {...props} />
+        {/snippet}
+      </Tabs.Content>
+    {/await}
+  {/if}
+  {#if keyboard.metadata.features.encoder}
+    {#await encoderTab then { default: EncoderTab }}
+      <Tabs.Content value="encoder">
+        {#snippet child({ props })}
+          <EncoderTab {...props} />
         {/snippet}
       </Tabs.Content>
     {/await}
