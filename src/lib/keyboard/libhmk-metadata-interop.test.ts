@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { interopFixturePath, loadLibhmkMetadata } from "./libhmk-metadata-interop"
+import {
+  interopFixturePath,
+  loadLibhmkMetadata,
+} from "./libhmk-metadata-interop"
 
 describe("libhmk metadata interoperability", () => {
   it("parses generated metadata for mochiko40he", () => {
@@ -8,21 +11,20 @@ describe("libhmk metadata interoperability", () => {
     expect(parsed.name).toBe("Mochiko40HE")
     expect(parsed.features.joystick).toBe(true)
     expect(parsed.features.encoder).toBe(false)
-    expect((parsed.analogKeys?.length ?? 0)).toBeGreaterThan(0)
+    expect(parsed.analogKeys?.length ?? 0).toBeGreaterThan(0)
     expect(parsed.defaultKeymaps).toHaveLength(parsed.numProfiles)
   })
 
   it("parses generated metadata for encoder and digital fixture keyboards", () => {
-    const parsed = loadLibhmkMetadata([
-      "--keyboard-json",
-      interopFixturePath,
-    ])
+    const parsed = loadLibhmkMetadata(["--keyboard-json", interopFixturePath])
 
     expect(parsed.features.encoder).toBe(true)
     expect(parsed.features.rgb).toBe(false)
     expect(parsed.features.joystick).toBe(false)
     expect(parsed.numKeys).toBe(6)
-    expect(parsed.layout.keymap.flat().map(({ key }) => key)).toEqual([0, 1, 2, 3])
+    expect(parsed.layout.keymap.flat().map(({ key }) => key)).toEqual([
+      0, 1, 2, 3,
+    ])
     expect(parsed.encoderKeys?.map(({ key }) => key)).toEqual([4, 5])
     expect(parsed.encoderKeys?.map(({ direction }) => direction)).toEqual([
       "cw",

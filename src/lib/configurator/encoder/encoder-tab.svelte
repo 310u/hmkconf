@@ -15,8 +15,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 <script lang="ts">
   import FixedScrollArea from "$lib/components/fixed-scroll-area.svelte"
-  import KeycodeAccordion from "$lib/components/keycode-accordion.svelte"
   import * as KeyboardEditor from "$lib/components/keyboard-editor"
+  import KeycodeAccordion from "$lib/components/keycode-accordion.svelte"
   import * as KeycodeButton from "$lib/components/keycode-button"
   import LayerSelect from "$lib/components/layer-select.svelte"
   import { Button } from "$lib/components/ui/button"
@@ -69,7 +69,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
       <FixedScrollArea class="h-full py-4">
         <div class="grid gap-2">
           {#if encoderKeys.length === 0}
-            <div class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            <div
+              class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground"
+            >
               No rotary encoder actions are exposed by this keyboard metadata.
             </div>
           {/if}

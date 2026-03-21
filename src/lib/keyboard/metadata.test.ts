@@ -17,12 +17,7 @@ describe("keyboardMetadataSchema", () => {
       },
       layout: {
         labels: [],
-        keymap: [
-          [
-            { key: 0 },
-            { key: 1 },
-          ],
-        ],
+        keymap: [[{ key: 0 }, { key: 1 }]],
       },
       encoderKeys: [
         {

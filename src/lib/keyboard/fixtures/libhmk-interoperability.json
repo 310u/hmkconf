@@ -45,14 +45,7 @@
   },
   "layout": {
     "labels": ["default"],
-    "keymap": [
-      [
-        { "key": 0 },
-        { "key": 1 },
-        { "key": 2 },
-        { "key": 3 }
-      ]
-    ]
+    "keymap": [[{ "key": 0 }, { "key": 1 }, { "key": 2 }, { "key": 3 }]]
   },
   "keymap": [
     ["KC_A", "KC_B", "KC_C", "KC_D", "KC_AUDIO_VOL_UP", "KC_AUDIO_VOL_DOWN"],
