@@ -25,6 +25,7 @@
     "test": "vitest",
     "test:unit": "vitest",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:interop": "bun scripts/check_libhmk_metadata_interop.ts",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint .",
