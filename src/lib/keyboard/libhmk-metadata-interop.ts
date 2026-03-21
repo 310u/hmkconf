@@ -15,7 +15,7 @@ export const interopFixturePath = fileURLToPath(
 
 export function loadLibhmkMetadata(args: string[]) {
   const output = execFileSync(
-    process.env.PYTHON ?? "python",
+    process.env.PYTHON ?? "python3",
     [exportScript, ...args],
     {
       cwd: libhmkRoot,

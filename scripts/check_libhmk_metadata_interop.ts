@@ -20,8 +20,8 @@ assert(
   "Did not expect encoder feature for mochiko40he",
 )
 assert(
-  (mochiko40he.analogKeys?.length ?? 0) > 0,
-  "Expected analogKeys for mochiko40he metadata",
+  JSON.stringify(mochiko40he.analogKeys) === JSON.stringify([...Array(41).keys()]),
+  "Expected analogKeys [0..40] for mochiko40he metadata",
 )
 
 const encoderFixture = loadLibhmkMetadata([

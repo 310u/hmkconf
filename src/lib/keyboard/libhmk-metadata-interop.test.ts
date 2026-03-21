@@ -11,7 +11,7 @@ describe("libhmk metadata interoperability", () => {
     expect(parsed.name).toBe("Mochiko40HE")
     expect(parsed.features.joystick).toBe(true)
     expect(parsed.features.encoder).toBe(false)
-    expect(parsed.analogKeys?.length ?? 0).toBeGreaterThan(0)
+    expect(parsed.analogKeys).toEqual([...Array(41).keys()])
     expect(parsed.defaultKeymaps).toHaveLength(parsed.numProfiles)
   })
 
