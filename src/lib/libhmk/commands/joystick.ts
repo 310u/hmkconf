@@ -5,6 +5,35 @@ import z from "zod"
 import { HMK_Command } from "."
 import { parseCommandOutBuffer } from "../types"
 
+export const HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS = 32
+export const HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT = 127
+export const HMK_JOYSTICK_RADIAL_BOUNDARY_FIRMWARE_VERSION = 0x0109
+export const HMK_JOYSTICK_MOUSE_PRESET_COUNT = 4
+export const HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION = 0x010a
+
+export function makeDefaultJoystickRadialBoundaries() {
+  return Array.from(
+    { length: HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS },
+    () => HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT,
+  )
+}
+
+export const joystickMousePresetSchema = z.object({
+  mouseSpeed: uint8Schema,
+  mouseAcceleration: uint8Schema,
+})
+export type HMK_JoystickMousePreset = z.infer<typeof joystickMousePresetSchema>
+
+export function makeDefaultJoystickMousePresets(
+  mouseSpeed = 10,
+  mouseAcceleration = 255,
+): HMK_JoystickMousePreset[] {
+  return Array.from({ length: HMK_JOYSTICK_MOUSE_PRESET_COUNT }, () => ({
+    mouseSpeed,
+    mouseAcceleration,
+  }))
+}
+
 export const joystickAxisCalibrationSchema = z.object({
   min: uint16Schema,
   center: uint16Schema,
@@ -14,7 +43,7 @@ export type HMK_JoystickAxisCalibration = z.infer<
   typeof joystickAxisCalibrationSchema
 >
 
-export const joystickConfigSchema = z.object({
+const joystickConfigBaseSchema = z.object({
   x: joystickAxisCalibrationSchema,
   y: joystickAxisCalibrationSchema,
   deadzone: uint8Schema,
@@ -22,8 +51,56 @@ export const joystickConfigSchema = z.object({
   mouseSpeed: uint8Schema,
   mouseAcceleration: uint8Schema,
   swDebounceMs: uint8Schema,
+  activeMousePreset: uint8Schema.optional(),
+  mousePresets: z
+    .array(joystickMousePresetSchema)
+    .max(HMK_JOYSTICK_MOUSE_PRESET_COUNT)
+    .optional(),
+  radialBoundaries: z
+    .array(uint8Schema)
+    .length(HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS)
+    .default(makeDefaultJoystickRadialBoundaries),
 })
-export type HMK_JoystickConfig = z.infer<typeof joystickConfigSchema>
+
+export function normalizeJoystickConfigPresets(
+  config: z.input<typeof joystickConfigBaseSchema>,
+) {
+  const fallback = {
+    mouseSpeed: config.mouseSpeed || 10,
+    mouseAcceleration: config.mouseAcceleration || 255,
+  }
+  const activeMousePreset =
+    config.activeMousePreset !== undefined &&
+    config.activeMousePreset < HMK_JOYSTICK_MOUSE_PRESET_COUNT
+      ? config.activeMousePreset
+      : 0
+  const mousePresets = Array.from(
+    { length: HMK_JOYSTICK_MOUSE_PRESET_COUNT },
+    (_, index) => ({
+      mouseSpeed:
+        config.mousePresets?.[index]?.mouseSpeed || fallback.mouseSpeed,
+      mouseAcceleration:
+        config.mousePresets?.[index]?.mouseAcceleration ||
+        fallback.mouseAcceleration,
+    }),
+  )
+  const activePreset = mousePresets[activeMousePreset]
+
+  return {
+    ...config,
+    mouseSpeed: activePreset.mouseSpeed,
+    mouseAcceleration: activePreset.mouseAcceleration,
+    activeMousePreset,
+    mousePresets,
+    radialBoundaries:
+      config.radialBoundaries ?? makeDefaultJoystickRadialBoundaries(),
+  }
+}
+
+export const joystickConfigSchema = joystickConfigBaseSchema.transform((config) =>
+  normalizeJoystickConfigPresets(config),
+)
+export type HMK_JoystickConfig = z.output<typeof joystickConfigSchema>
 
 export const joystickStateSchema = z.object({
   rawX: uint16Schema,
@@ -64,6 +141,7 @@ export type GetJoystickConfigParams = {
 export async function getJoystickConfig(
   commander: Commander,
   params: GetJoystickConfigParams,
+  firmwareVersion = HMK_JOYSTICK_RADIAL_BOUNDARY_FIRMWARE_VERSION,
 ): Promise<HMK_JoystickConfig> {
   const reader = new DataViewReader(
     await commander.sendCommand({
@@ -74,9 +152,6 @@ export async function getJoystickConfig(
 
   parseCommandOutBuffer(reader, HMK_Command.GET_JOYSTICK_CONFIG)
 
-  // Read embedded payload:
-  // typedef struct { uint8_t data[20]; } command_out_joystick_config_t;
-  // But data is actually joystick_config_t directly.
   const xMin = reader.uint16()
   const xCenter = reader.uint16()
   const xMax = reader.uint16()
@@ -90,10 +165,27 @@ export async function getJoystickConfig(
   const mouseSpeed = reader.uint8()
   const mouseAcceleration = reader.uint8() || 255
   const swDebounceMs = reader.uint8()
-  // Skip 3 reserved bytes
+  // Skip legacy reserved bytes.
   reader.offset += 3
+  const radialBoundaries =
+    firmwareVersion >= HMK_JOYSTICK_RADIAL_BOUNDARY_FIRMWARE_VERSION
+      ? Array.from({ length: HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS }, () =>
+          reader.uint8(),
+        )
+      : makeDefaultJoystickRadialBoundaries()
+  const activeMousePreset =
+    firmwareVersion >= HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION
+      ? reader.uint8()
+      : 0
+  const mousePresets =
+    firmwareVersion >= HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION
+      ? Array.from({ length: HMK_JOYSTICK_MOUSE_PRESET_COUNT }, () => ({
+          mouseSpeed: reader.uint8(),
+          mouseAcceleration: reader.uint8(),
+        }))
+      : makeDefaultJoystickMousePresets(mouseSpeed, mouseAcceleration)
 
-  return {
+  return normalizeJoystickConfigPresets({
     x: { min: xMin, center: xCenter, max: xMax },
     y: { min: yMin, center: yCenter, max: yMax },
     deadzone,
@@ -101,7 +193,10 @@ export async function getJoystickConfig(
     mouseSpeed,
     mouseAcceleration,
     swDebounceMs,
-  }
+    activeMousePreset,
+    mousePresets,
+    radialBoundaries,
+  })
 }
 
 export type SetJoystickConfigParams = {
@@ -113,7 +208,12 @@ export async function setJoystickConfig(
   commander: Commander,
   params: SetJoystickConfigParams,
 ): Promise<void> {
-  const payload = new Uint8Array(21) // profile(1) + joystick_config(20)
+  const payload = new Uint8Array(
+    21 +
+      HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS +
+      1 +
+      HMK_JOYSTICK_MOUSE_PRESET_COUNT * 2,
+  )
   const view = new DataView(payload.buffer)
 
   view.setUint8(0, params.profile)
@@ -130,8 +230,20 @@ export async function setJoystickConfig(
   view.setUint8(15, params.config.mouseSpeed)
   view.setUint8(16, params.config.mouseAcceleration)
   view.setUint8(17, params.config.swDebounceMs)
-
-  // remaining reserved bytes remain 0 by default when using Uint8Array constructor
+  for (let i = 0; i < HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS; i++) {
+    view.setUint8(21 + i, params.config.radialBoundaries[i] ?? 127)
+  }
+  view.setUint8(21 + HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS, params.config.activeMousePreset)
+  for (let i = 0; i < HMK_JOYSTICK_MOUSE_PRESET_COUNT; i++) {
+    const preset = params.config.mousePresets[i] ?? {
+      mouseSpeed: params.config.mouseSpeed,
+      mouseAcceleration: params.config.mouseAcceleration,
+    }
+    const offset =
+      22 + HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS + i * 2
+    view.setUint8(offset, preset.mouseSpeed)
+    view.setUint8(offset + 1, preset.mouseAcceleration)
+  }
 
   await commander.sendCommand({
     command: HMK_Command.SET_JOYSTICK_CONFIG,

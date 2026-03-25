@@ -3,15 +3,45 @@
   import * as Select from "$lib/components/ui/select"
   import { Slider } from "$lib/components/ui/slider"
   import { keyboardContext, type Keyboard } from "$lib/keyboard"
-  import type {
-    HMK_JoystickConfig,
-    HMK_JoystickState,
+  import type { HMK_Options } from "$lib/libhmk"
+  import {
+    HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION,
+    type HMK_JoystickConfig,
+    type HMK_JoystickMousePreset,
+    type HMK_JoystickState,
   } from "$lib/libhmk/commands/joystick"
-  import { cn, type WithoutChildren } from "$lib/utils"
+  import { cn, displayVersion, type WithoutChildren } from "$lib/utils"
+  import { untrack } from "svelte"
+  import { toast } from "svelte-sonner"
   import type { HTMLAttributes } from "svelte/elements"
   import { globalStateContext } from "../context.svelte"
+  import JoystickDiagnosticPlot from "./joystick-diagnostic-plot.svelte"
+  import {
+    assessJoystickRestSamples,
+    applyJoystickCircularCorrection,
+    applyJoystickRadialDeadzone,
+    buildCalibrationCandidate,
+    buildJoystickDiagnosticSample,
+    computeJoystickCircularity,
+    normalizeRawPoint,
+    optimizeCalibrationCandidate,
+    pushBoundedSample,
+    type JoystickCalibrationCandidate,
+    type JoystickDiagnosticRawSample,
+    type JoystickDiagnosticSample,
+    type JoystickVector,
+  } from "./joystick-diagnostics"
 
-  const JOYSTICK_STATE_POLL_INTERVAL = 1000 / 30
+  const JOYSTICK_STATE_POLL_INTERVAL = 1000 / 60
+  const LIVE_SAMPLE_LIMIT = 360
+  const SWEEP_SAMPLE_LIMIT = 720
+  const FRESH_CAPTURE_MAX_SAMPLES = 300
+  const FRESH_CAPTURE_START_THRESHOLD = 24
+  const DIAGNOSTIC_EXPORT_POINT_LIMIT = 60
+  const HOST_GAMEPAD_ACTIVE_THRESHOLD = 8
+  const HOST_GAMEPAD_AXIS_SPAN_THRESHOLD = 0.35
+  const HOST_GAMEPAD_AXIS_BIPOLAR_THRESHOLD = 0.2
+  const HOST_GAMEPAD_AXIS_PAIR_SCORE_THRESHOLD = 0.8
 
   const {
     class: className,
@@ -22,18 +52,99 @@
   const { profile, tab } = $derived(globalStateContext.get())
 
   let config = $state<HMK_JoystickConfig | null>(null)
+  let options = $state<HMK_Options | null>(null)
   let joystickState = $state<HMK_JoystickState | null>(null)
   let loading = $state(true)
 
   let calibrationPhase = $state<"idle" | "rest" | "max">("idle")
   let calibrationPreviousMode = $state<number | null>(null)
+  let configReadbackVerified = $state<boolean | null>(null)
+  let liveSamples = $state<JoystickDiagnosticSample[]>([])
+  let freshCapturePhase = $state<"idle" | "armed" | "capturing" | "complete">(
+    "idle",
+  )
+  let freshLiveSamples = $state<JoystickDiagnosticSample[]>([])
+  let freshHostGamepadSamples = $state<JoystickVector[]>([])
+  let hostGamepadSamples = $state<JoystickVector[]>([])
+  let hostGamepadAxesHistory = $state<number[][]>([])
+  let hostGamepadAxesSourceKey = $state<string | null>(null)
+  let hostGamepadSampleSourceKey = $state<string | null>(null)
+  let sweepRawSamples = $state<JoystickDiagnosticRawSample[]>([])
+  let lastSweepRawSamples = $state<JoystickDiagnosticRawSample[]>([])
+  let lastSweepCalibration = $state<JoystickCalibrationCandidate | null>(null)
+  type HostGamepadCandidate = {
+    index: number
+    id: string
+    mapping: string
+    axes: number
+    buttons: number
+    sampledStick: "left" | "right" | null
+    axisPair: [number, number] | null
+    rawAxes: number[]
+    vector: JoystickVector | null
+    magnitude: number
+    active: boolean
+    selected: boolean
+  }
+  let hostGamepadState = $state<{
+    available: boolean
+    connected: boolean
+    index: number | null
+    id: string | null
+    mapping: string | null
+    sampledStick: "left" | "right" | null
+    axisPair: [number, number] | null
+    rawAxes: number[]
+    vector: JoystickVector | null
+    magnitude: number
+    candidates: HostGamepadCandidate[]
+  }>({
+    available: false,
+    connected: false,
+    index: null,
+    id: null,
+    mapping: null,
+    sampledStick: null,
+    axisPair: null,
+    rawAxes: [],
+    vector: null,
+    magnitude: 0,
+    candidates: [],
+  })
 
   $effect(() => {
     if (tab !== "joystick") return
 
     loading = true
+    options = null
+    liveSamples = []
+    freshCapturePhase = "idle"
+    freshLiveSamples = []
+    freshHostGamepadSamples = []
+    hostGamepadSamples = []
+    hostGamepadAxesHistory = []
+    hostGamepadAxesSourceKey = null
+    hostGamepadSampleSourceKey = null
+    sweepRawSamples = []
+    lastSweepRawSamples = []
+    lastSweepCalibration = null
+    configReadbackVerified = null
+    hostGamepadState = {
+      available: typeof navigator !== "undefined" && !!navigator.getGamepads,
+      connected: false,
+      index: null,
+      id: null,
+      mapping: null,
+      sampledStick: null,
+      axisPair: null,
+      rawAxes: [],
+      vector: null,
+      magnitude: 0,
+      candidates: [],
+    }
     let active = true
     let pollTimeout: number | null = null
+    let joystickPollInFlight = false
 
     keyboard
       .getJoystickConfig?.({ profile })
@@ -48,19 +159,41 @@
         if (active) loading = false
       })
 
+    keyboard
+      .getOptions()
+      .then((currentOptions) => {
+        if (!active) return
+        options = currentOptions
+      })
+      .catch(() => {
+        // ignore disconnects
+      })
+
     async function pollState() {
       if (!active) return
+
+      if (joystickPollInFlight) {
+        pollTimeout = window.setTimeout(pollState, JOYSTICK_STATE_POLL_INTERVAL)
+        return
+      }
+
+      joystickPollInFlight = true
       try {
         if (keyboard.getJoystickState) {
           joystickState = await keyboard.getJoystickState()
         }
+        pollHostGamepad()
       } catch {
         // ignore disconnects
+      } finally {
+        joystickPollInFlight = false
       }
+
       if (active) {
         pollTimeout = window.setTimeout(pollState, JOYSTICK_STATE_POLL_INTERVAL)
       }
     }
+
     pollState()
 
     return () => {
@@ -71,11 +204,96 @@
     }
   })
 
+  $effect(() => {
+    if (!joystickState || !config) return
+
+    const sample = buildJoystickDiagnosticSample(joystickState, config)
+
+    liveSamples = pushBoundedSample(
+      untrack(() => liveSamples),
+      sample,
+      LIVE_SAMPLE_LIMIT,
+    )
+
+    updateFreshCapture(sample)
+
+    if (calibrationPhase === "max") {
+      sweepRawSamples = pushBoundedSample(
+        untrack(() => sweepRawSamples),
+        { x: joystickState.rawX, y: joystickState.rawY },
+        SWEEP_SAMPLE_LIMIT,
+      )
+    }
+  })
+
+  $effect(() => {
+    const currentAxesSourceKey =
+      hostGamepadState.index !== null ? String(hostGamepadState.index) : null
+    if (currentAxesSourceKey === hostGamepadAxesSourceKey) return
+
+    hostGamepadAxesSourceKey = currentAxesSourceKey
+    hostGamepadAxesHistory = []
+  })
+
+  $effect(() => {
+    if (hostGamepadState.rawAxes.length === 0) return
+
+    hostGamepadAxesHistory = pushBoundedSample(
+      untrack(() => hostGamepadAxesHistory),
+      hostGamepadState.rawAxes,
+      LIVE_SAMPLE_LIMIT,
+    )
+  })
+
+  $effect(() => {
+    const currentSourceKey =
+      hostGamepadState.index !== null && hostGamepadState.sampledStick
+        ? `${hostGamepadState.index}:${hostGamepadState.sampledStick}:${
+            hostGamepadState.axisPair?.join(",") ?? "na"
+          }`
+        : null
+    if (currentSourceKey === hostGamepadSampleSourceKey) return
+
+    hostGamepadSampleSourceKey = currentSourceKey
+    hostGamepadSamples = []
+  })
+
+  $effect(() => {
+    if (!hostGamepadState.vector) return
+
+    hostGamepadSamples = pushBoundedSample(
+      untrack(() => hostGamepadSamples),
+      hostGamepadState.vector,
+      LIVE_SAMPLE_LIMIT,
+    )
+
+    if (freshCapturePhase !== "capturing") return
+
+    freshHostGamepadSamples = pushBoundedSample(
+      untrack(() => freshHostGamepadSamples),
+      hostGamepadState.vector,
+      FRESH_CAPTURE_MAX_SAMPLES,
+    )
+  })
+
   async function updateConfig(newConfig: Partial<HMK_JoystickConfig>) {
     if (!config) return
     const updated = { ...config, ...newConfig }
-    config = updated
-    await keyboard.setJoystickConfig?.({ profile, config: updated })
+    await persistJoystickConfig(updated)
+  }
+
+  async function updateConfigWithToast(
+    newConfig: Partial<HMK_JoystickConfig>,
+    message: string,
+  ) {
+    try {
+      await updateConfig(newConfig)
+      return true
+    } catch (error) {
+      toast.error(message)
+      console.error(error)
+      return false
+    }
   }
 
   const modes = [
@@ -88,42 +306,210 @@
     { value: "6", label: "Cursor 8-way" },
   ]
 
+  const supportsJoystickMousePresets = $derived.by(
+    () => keyboard.version >= HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION,
+  )
+
   // Calibration logic
   // We collect samples to find min/max and center
-  let centerSamplesX: number[] = []
-  let centerSamplesY: number[] = []
-  let minX = 4095
-  let maxX = 0
-  let minY = 4095
-  let maxY = 0
+  let centerSamplesX = $state<number[]>([])
+  let centerSamplesY = $state<number[]>([])
+  let minX = $state(4095)
+  let maxX = $state(0)
+  let minY = $state(4095)
+  let maxY = $state(0)
+
+  const liveRawPoints = $derived.by(() =>
+    liveSamples.map((sample) => sample.raw),
+  )
+  const liveOutPoints = $derived.by(() =>
+    liveSamples.map((sample) => sample.out),
+  )
+  const freshRawPoints = $derived.by(() =>
+    freshLiveSamples.map((sample) => sample.raw),
+  )
+  const freshOutPoints = $derived.by(() =>
+    freshLiveSamples.map((sample) => sample.out),
+  )
+  const freshHostPoints = $derived.by(() => freshHostGamepadSamples)
+  const hostGamepadPoints = $derived.by(() => hostGamepadSamples)
+  const detectedHostGamepadAxisPair = $derived.by(() =>
+    detectHostGamepadAxisPair(hostGamepadAxesHistory),
+  )
+  const liveRawCircularity = $derived.by(() =>
+    computeJoystickCircularity(liveRawPoints),
+  )
+  const liveOutCircularity = $derived.by(() =>
+    computeJoystickCircularity(liveOutPoints),
+  )
+  const freshRawCircularity = $derived.by(() =>
+    computeJoystickCircularity(freshRawPoints),
+  )
+  const freshOutCircularity = $derived.by(() =>
+    computeJoystickCircularity(freshOutPoints),
+  )
+  const restAssessment = $derived.by(() =>
+    assessJoystickRestSamples(centerSamplesX, centerSamplesY),
+  )
+  const freshHostCircularity = $derived.by(() =>
+    computeJoystickCircularity(freshHostPoints),
+  )
+  const hostGamepadCircularity = $derived.by(() =>
+    computeJoystickCircularity(hostGamepadPoints),
+  )
+  const sweepCalibration = $derived.by(() =>
+    buildCalibrationCandidate(
+      centerSamplesX,
+      centerSamplesY,
+      minX,
+      maxX,
+      minY,
+      maxY,
+      sweepRawSamples,
+    ),
+  )
+  const displayedSweepCalibration = $derived.by(
+    () =>
+      (calibrationPhase === "max" ? sweepCalibration : lastSweepCalibration) ??
+      null,
+  )
+  const displayedSweepRawSamples = $derived.by(() =>
+    calibrationPhase === "max" ? sweepRawSamples : lastSweepRawSamples,
+  )
+  const displayedSweepPoints = $derived.by(() => {
+    if (!displayedSweepCalibration) return []
+
+    return displayedSweepRawSamples.map((sample) =>
+      applyJoystickCircularCorrection(
+        normalizeRawPoint(sample, displayedSweepCalibration),
+        displayedSweepCalibration.radialBoundaries,
+      ),
+    )
+  })
+  const displayedSweepOutputPoints = $derived.by(() => {
+    if (!config) return []
+    const deadzone = config.deadzone
+
+    return displayedSweepPoints.map((point) =>
+      applyJoystickRadialDeadzone(point, deadzone),
+    )
+  })
+  const sweepCircularity = $derived.by(() =>
+    computeJoystickCircularity(displayedSweepPoints),
+  )
+  const sweepOutputCircularity = $derived.by(() =>
+    computeJoystickCircularity(displayedSweepOutputPoints),
+  )
+  const currentGamepadTransport = $derived.by(() => {
+    if (!options) return "Unknown"
+    return options.xInputEnabled ? "XInput" : "HID Gamepad"
+  })
+  const supportsHostTransportComparison = $derived.by(() => {
+    if (typeof navigator === "undefined") return false
+    return !/Linux/i.test(navigator.userAgent)
+  })
+  const gamepadHostValidationMode = $derived.by(() => {
+    if (!config)
+      return "Switch the joystick mode to XInput Left Stick or XInput Right Stick before host-side gamepad checks."
+    if (!supportsHostTransportComparison) {
+      if (config.mode === 2 || config.mode === 3) {
+        return "This host only exposes the HID Gamepad path, so compare firmware OUT circularity against HID host capture."
+      }
+      return "Switch the joystick mode to XInput Left Stick or XInput Right Stick before HID host-side gamepad checks."
+    }
+    if (config.mode === 2 || config.mode === 3) {
+      return "The joystick mode is already mapped to a gamepad stick, so host-side transport checks are ready."
+    }
+    return "Switch the joystick mode to XInput Left Stick or XInput Right Stick before host-side gamepad checks."
+  })
+  const transportValidationAdvice = $derived.by(() => {
+    if (!supportsHostTransportComparison) {
+      return "On Linux, host validation is limited to the HID Gamepad path. Use firmware OUT circularity as the primary metric, then compare it against HID host capture when the joystick mode is mapped to a stick."
+    }
+
+    return "After the shape is stable here, compare host behavior twice for gamepad use: once with XInput enabled, and once with XInput disabled."
+  })
+  const hostGamepadStatus = $derived.by(() => {
+    if (!hostGamepadState.available) {
+      return "Gamepad API is not available in this environment."
+    }
+    if (hostGamepadState.candidates.length === 0) {
+      return "No host gamepad is currently detected. Disconnect other controllers if needed."
+    }
+    if (!hostGamepadState.sampledStick) {
+      return "A host gamepad is connected, but the joystick mode is not set to a gamepad stick."
+    }
+    if (!hostGamepadState.axisPair) {
+      return `Detected ${hostGamepadState.candidates.length} host gamepad(s), but the ${hostGamepadState.sampledStick} stick axis pair is still being inferred.`
+    }
+    if (hostGamepadState.magnitude < HOST_GAMEPAD_ACTIVE_THRESHOLD) {
+      return `Detected ${hostGamepadState.candidates.length} host gamepad(s), but no activity was seen on the sampled ${hostGamepadState.sampledStick} stick yet.`
+    }
+    return `Sampling axes ${hostGamepadState.axisPair[0]}/${hostGamepadState.axisPair[1]} as the ${hostGamepadState.sampledStick} stick from host gamepad #${hostGamepadState.index}.`
+  })
+  const freshCaptureStatus = $derived.by(() => {
+    if (freshCapturePhase === "armed") {
+      return "Fresh capture is armed. Move the joystick to begin sampling."
+    }
+    if (freshCapturePhase === "capturing") {
+      return `Capturing a fresh sweep: ${freshLiveSamples.length} samples recorded.`
+    }
+    if (freshCapturePhase === "complete") {
+      return `Fresh capture complete with ${freshLiveSamples.length} joystick samples.`
+    }
+    return "No fresh sweep captured yet."
+  })
 
   $effect(() => {
     if (!joystickState) return
 
     if (calibrationPhase === "rest") {
-      centerSamplesX.push(joystickState.rawX)
-      centerSamplesY.push(joystickState.rawY)
+      centerSamplesX = [...untrack(() => centerSamplesX), joystickState.rawX]
+      centerSamplesY = [...untrack(() => centerSamplesY), joystickState.rawY]
     } else if (calibrationPhase === "max") {
-      minX = Math.min(minX, joystickState.rawX)
-      maxX = Math.max(maxX, joystickState.rawX)
-      minY = Math.min(minY, joystickState.rawY)
-      maxY = Math.max(maxY, joystickState.rawY)
+      minX = Math.min(
+        untrack(() => minX),
+        joystickState.rawX,
+      )
+      maxX = Math.max(
+        untrack(() => maxX),
+        joystickState.rawX,
+      )
+      minY = Math.min(
+        untrack(() => minY),
+        joystickState.rawY,
+      )
+      maxY = Math.max(
+        untrack(() => maxY),
+        joystickState.rawY,
+      )
     }
   })
 
   async function startCalibration() {
     if (!config) return
 
+    liveSamples = []
+    clearFreshCapture()
     centerSamplesX = []
     centerSamplesY = []
+    sweepRawSamples = []
     minX = 4095
     maxX = 0
     minY = 4095
     maxY = 0
 
     calibrationPreviousMode = config.mode
+
     if (config.mode !== 0) {
-      await updateConfig({ mode: 0 })
+      const disabled = await updateConfigWithToast(
+        { mode: 0 },
+        "Calibration started, but the joystick mode could not be temporarily disabled.",
+      )
+      if (!disabled) {
+        calibrationPreviousMode = null
+        return
+      }
     }
 
     calibrationPhase = "rest"
@@ -133,17 +519,21 @@
     if (calibrationPhase === "rest") {
       calibrationPhase = "max"
     } else if (calibrationPhase === "max") {
-      finishCalibration()
+      void finishCalibration()
     }
   }
 
   async function cancelCalibration() {
     calibrationPhase = "idle"
+    sweepRawSamples = []
     if (calibrationPreviousMode !== null && config) {
       const restoreMode = calibrationPreviousMode
       calibrationPreviousMode = null
       if (config.mode !== restoreMode) {
-        await updateConfig({ mode: restoreMode })
+        await updateConfigWithToast(
+          { mode: restoreMode },
+          "Calibration was canceled, but the previous joystick mode could not be restored.",
+        )
       }
     }
   }
@@ -151,31 +541,704 @@
   async function finishCalibration() {
     if (!config) return
 
-    const avgCx =
-      centerSamplesX.reduce((a, b) => a + b, 0) /
-      Math.max(1, centerSamplesX.length)
-    const avgCy =
-      centerSamplesY.reduce((a, b) => a + b, 0) /
-      Math.max(1, centerSamplesY.length)
+    if (!restAssessment.stable) {
+      toast.error(
+        `Rest calibration was unstable (spread x=${Math.round(
+          restAssessment.x.spread,
+        )}, y=${Math.round(restAssessment.y.spread)}). Restart and keep the stick centered before Next.`,
+      )
+      return
+    }
 
-    const updated = { ...config }
-    updated.x.center = Math.round(avgCx)
-    updated.y.center = Math.round(avgCy)
+    const previewCandidate = sweepCalibration
+    if (!previewCandidate) return
 
-    // Safety boundaries
-    updated.x.min = Math.min(minX, updated.x.center - 100)
-    updated.x.max = Math.max(maxX, updated.x.center + 100)
-    updated.y.min = Math.min(minY, updated.y.center - 100)
-    updated.y.max = Math.max(maxY, updated.y.center + 100)
+    const candidate = optimizeCalibrationCandidate(
+      previewCandidate,
+      sweepRawSamples,
+    )
+
+    const updated = {
+      ...config,
+      x: candidate.x,
+      y: candidate.y,
+      radialBoundaries: candidate.radialBoundaries,
+    }
     if (calibrationPreviousMode !== null) {
       updated.mode = calibrationPreviousMode
     }
 
+    lastSweepCalibration = candidate
+    lastSweepRawSamples = [...sweepRawSamples]
+    sweepRawSamples = []
     calibrationPhase = "idle"
     calibrationPreviousMode = null
 
+    try {
+      await persistJoystickConfig(updated)
+      // Clear mixed pre/post-calibration samples so live circularity only
+      // reflects the saved config after the user performs a fresh sweep.
+      liveSamples = []
+      clearFreshCapture()
+      hostGamepadSamples = []
+    } catch (error) {
+      toast.error("Calibration values could not be saved to the keyboard.")
+      console.error(error)
+    }
+  }
+
+  function circularityTone(score: number, sufficient: boolean) {
+    if (!sufficient) return "bg-muted text-muted-foreground"
+    if (score >= 90) return "bg-emerald-500/15 text-emerald-700"
+    if (score >= 75) return "bg-sky-500/15 text-sky-700"
+    if (score >= 60) return "bg-amber-500/15 text-amber-700"
+    return "bg-rose-500/15 text-rose-700"
+  }
+
+  function roundValue(value: number, digits = 2) {
+    return Number(value.toFixed(digits))
+  }
+
+  function serializePoint(point: { x: number; y: number }) {
+    return {
+      x: roundValue(point.x),
+      y: roundValue(point.y),
+    }
+  }
+
+  function serializeAxes(values: number[]) {
+    return values.map((value) => roundValue(value, 4))
+  }
+
+  function serializeCircularity(report: typeof liveRawCircularity) {
+    return {
+      score: roundValue(report.score),
+      label: report.label,
+      sampleCount: report.sampleCount,
+      outerSampleCount: report.outerSampleCount,
+      quadrantCoverage: report.quadrantCoverage,
+      meanRadius: roundValue(report.meanRadius),
+      radiusSpread: roundValue(report.radiusSpread, 4),
+      axisRatio: roundValue(report.axisRatio, 4),
+      sufficient: report.sufficient,
+    }
+  }
+
+  function joystickVectorMagnitude(point: JoystickVector) {
+    return Math.hypot(point.x, point.y)
+  }
+
+  function clearFreshCapture() {
+    freshCapturePhase = "idle"
+    freshLiveSamples = []
+    freshHostGamepadSamples = []
+  }
+
+  function completeFreshCapture() {
+    if (freshCapturePhase !== "capturing") return
+
+    freshCapturePhase = "complete"
+    toast.success("Fresh joystick capture completed.")
+  }
+
+  function updateFreshCapture(sample: JoystickDiagnosticSample) {
+    if (calibrationPhase !== "idle") return
+
+    const magnitude = joystickVectorMagnitude(sample.out)
+
+    if (freshCapturePhase === "armed") {
+      if (magnitude < FRESH_CAPTURE_START_THRESHOLD) return
+
+      freshCapturePhase = "capturing"
+      freshLiveSamples = [sample]
+      freshHostGamepadSamples = []
+      return
+    }
+
+    if (freshCapturePhase !== "capturing") return
+
+    const nextSamples = pushBoundedSample(
+      untrack(() => freshLiveSamples),
+      sample,
+      FRESH_CAPTURE_MAX_SAMPLES,
+    )
+
+    freshLiveSamples = nextSamples
+
+    if (nextSamples.length >= FRESH_CAPTURE_MAX_SAMPLES) {
+      completeFreshCapture()
+    }
+  }
+
+  async function updateActiveMousePreset(
+    nextPreset: Partial<HMK_JoystickMousePreset>,
+  ) {
+    if (!config) return
+    const currentConfig = config
+
+    if (!supportsJoystickMousePresets) {
+      await updateConfig({
+        mouseSpeed: nextPreset.mouseSpeed ?? currentConfig.mouseSpeed,
+        mouseAcceleration:
+          nextPreset.mouseAcceleration ?? currentConfig.mouseAcceleration,
+      })
+      return
+    }
+
+    const activePreset = {
+      ...currentConfig.mousePresets[currentConfig.activeMousePreset],
+      ...nextPreset,
+    }
+    const mousePresets = currentConfig.mousePresets.map((preset, index) =>
+      index === currentConfig.activeMousePreset ? activePreset : preset,
+    )
+
+    await updateConfig({
+      mouseSpeed: activePreset.mouseSpeed,
+      mouseAcceleration: activePreset.mouseAcceleration,
+      mousePresets,
+    })
+  }
+
+  async function selectMousePreset(index: number) {
+    if (!config || !supportsJoystickMousePresets) return
+
+    const nextIndex = Math.max(0, Math.min(index, config.mousePresets.length - 1))
+    const preset = config.mousePresets[nextIndex]
+
+    await updateConfig({
+      activeMousePreset: nextIndex,
+      mouseSpeed: preset.mouseSpeed,
+      mouseAcceleration: preset.mouseAcceleration,
+    })
+  }
+
+  function joystickConfigsEqual(
+    left: HMK_JoystickConfig,
+    right: HMK_JoystickConfig,
+  ) {
+    return (
+      left.x.min === right.x.min &&
+      left.x.center === right.x.center &&
+      left.x.max === right.x.max &&
+      left.y.min === right.y.min &&
+      left.y.center === right.y.center &&
+      left.y.max === right.y.max &&
+      left.deadzone === right.deadzone &&
+      left.mode === right.mode &&
+      left.mouseSpeed === right.mouseSpeed &&
+      left.mouseAcceleration === right.mouseAcceleration &&
+      left.swDebounceMs === right.swDebounceMs &&
+      (!supportsJoystickMousePresets ||
+        (left.activeMousePreset === right.activeMousePreset &&
+          left.mousePresets.length === right.mousePresets.length &&
+          left.mousePresets.every(
+            (preset, index) =>
+              preset.mouseSpeed === right.mousePresets[index]?.mouseSpeed &&
+              preset.mouseAcceleration ===
+                right.mousePresets[index]?.mouseAcceleration,
+          ))) &&
+      left.radialBoundaries.length === right.radialBoundaries.length &&
+      left.radialBoundaries.every(
+        (boundary, index) => boundary === right.radialBoundaries[index],
+      )
+    )
+  }
+
+  async function persistJoystickConfig(updated: HMK_JoystickConfig) {
+    if (!config) return
+
+    const previous = config
     config = updated
-    await keyboard.setJoystickConfig?.({ profile, config: updated })
+    configReadbackVerified = null
+
+    try {
+      await keyboard.setJoystickConfig?.({ profile, config: updated })
+
+      if (!keyboard.getJoystickConfig) {
+        return
+      }
+
+      const persisted = await keyboard.getJoystickConfig({ profile })
+      config = persisted
+      configReadbackVerified = joystickConfigsEqual(updated, persisted)
+      if (!configReadbackVerified) {
+        throw new Error("Joystick config read-back mismatch")
+      }
+    } catch (error) {
+      config = previous
+      configReadbackVerified = false
+      throw error
+    }
+  }
+
+  function getModeLabel(mode: number) {
+    return (
+      modes.find((entry) => Number(entry.value) === mode)?.label ?? "Unknown"
+    )
+  }
+
+  function clampHostAxis(value: number) {
+    return Math.max(-127, Math.min(127, value * 127))
+  }
+
+  function currentHostStickMode(mode: number | null): "left" | "right" | null {
+    if (mode === 2) return "left"
+    if (mode === 3) return "right"
+    return null
+  }
+
+  function hostGamepadMagnitude(vector: JoystickVector | null) {
+    if (!vector) return 0
+    return Math.hypot(vector.x, vector.y)
+  }
+
+  function standardHostAxisPair(
+    sampledStick: "left" | "right",
+  ): [number, number] {
+    return sampledStick === "left" ? [0, 1] : [2, 3]
+  }
+
+  function hostGamepadRawAxes(gamepad: Gamepad) {
+    return Array.from(gamepad.axes, (value) =>
+      Number.isFinite(value) ? value : 0,
+    )
+  }
+
+  function hostGamepadVectorFromRawAxes(
+    rawAxes: number[],
+    axisPair: [number, number],
+  ): JoystickVector | null {
+    const [xAxisIndex, yAxisIndex] = axisPair
+    if (xAxisIndex >= rawAxes.length || yAxisIndex >= rawAxes.length) {
+      return null
+    }
+
+    return {
+      x: clampHostAxis(rawAxes[xAxisIndex] ?? 0),
+      y: clampHostAxis(-(rawAxes[yAxisIndex] ?? 0)),
+    }
+  }
+
+  function hostGamepadVectorFromAxisPair(
+    gamepad: Gamepad,
+    axisPair: [number, number],
+  ): JoystickVector | null {
+    return hostGamepadVectorFromRawAxes(gamepad.axes as unknown as number[], axisPair)
+  }
+
+  function hostGamepadFallbackMagnitude(rawAxes: number[]) {
+    if (rawAxes.length === 0) return 0
+
+    const [largest = 0, secondLargest = 0] = rawAxes
+      .map((value) => Math.abs(clampHostAxis(value)))
+      .sort((left, right) => right - left)
+
+    return Math.hypot(largest, secondLargest)
+  }
+
+  function detectHostGamepadAxisPair(
+    axesHistory: number[][],
+  ): [number, number] | null {
+    if (axesHistory.length < 8) return null
+
+    const axisCount = axesHistory.reduce(
+      (currentMax, values) => Math.max(currentMax, values.length),
+      0,
+    )
+    if (axisCount < 2) return null
+
+    const activeAxes = Array.from({ length: axisCount }, (_, index) => {
+      let min = Number.POSITIVE_INFINITY
+      let max = Number.NEGATIVE_INFINITY
+      let peakAbs = 0
+
+      for (const values of axesHistory) {
+        const value = values[index] ?? 0
+        min = Math.min(min, value)
+        max = Math.max(max, value)
+        peakAbs = Math.max(peakAbs, Math.abs(value))
+      }
+
+      return {
+        index,
+        min,
+        max,
+        peakAbs,
+        span: max - min,
+        bipolar:
+          min <= -HOST_GAMEPAD_AXIS_BIPOLAR_THRESHOLD &&
+          max >= HOST_GAMEPAD_AXIS_BIPOLAR_THRESHOLD,
+      }
+    }).filter(
+      (axis) =>
+        axis.span >= HOST_GAMEPAD_AXIS_SPAN_THRESHOLD &&
+        axis.peakAbs >= HOST_GAMEPAD_AXIS_BIPOLAR_THRESHOLD &&
+        axis.bipolar,
+    )
+
+    if (activeAxes.length < 2) return null
+
+    let bestCircularPair: { pair: [number, number]; score: number } | null = null
+    let bestSpanPair: { pair: [number, number]; score: number } | null = null
+    for (let leftIndex = 0; leftIndex < activeAxes.length; leftIndex += 1) {
+      for (
+        let rightIndex = leftIndex + 1;
+        rightIndex < activeAxes.length;
+        rightIndex += 1
+      ) {
+        const leftAxis = activeAxes[leftIndex]
+        const rightAxis = activeAxes[rightIndex]
+        let score = leftAxis.span + rightAxis.span
+
+        if (rightAxis.index === leftAxis.index + 1) {
+          score += 0.1
+        }
+        if (
+          leftAxis.index % 2 === 0 &&
+          rightAxis.index === leftAxis.index + 1
+        ) {
+          score += 0.05
+        }
+
+        if (!bestSpanPair || score > bestSpanPair.score) {
+          bestSpanPair = {
+            pair: [leftAxis.index, rightAxis.index],
+            score,
+          }
+        }
+
+        const pair: [number, number] = [leftAxis.index, rightAxis.index]
+        const pairPoints = axesHistory
+          .map((rawAxes) => hostGamepadVectorFromRawAxes(rawAxes, pair))
+          .filter((point): point is JoystickVector => point !== null)
+        const circularity = computeJoystickCircularity(pairPoints)
+
+        if (!circularity.sufficient) {
+          continue
+        }
+
+        const circularityScore = circularity.score + score * 0.01
+        if (!bestCircularPair || circularityScore > bestCircularPair.score) {
+          bestCircularPair = {
+            pair,
+            score: circularityScore,
+          }
+        }
+      }
+    }
+
+    if (bestCircularPair) {
+      return bestCircularPair.pair
+    }
+
+    if (
+      !bestSpanPair ||
+      bestSpanPair.score < HOST_GAMEPAD_AXIS_PAIR_SCORE_THRESHOLD
+    ) {
+      return null
+    }
+
+    return bestSpanPair.pair
+  }
+
+  function selectHostGamepadCandidate(
+    candidates: HostGamepadCandidate[],
+    previousIndex: number | null,
+  ) {
+    const previousCandidate =
+      previousIndex === null
+        ? null
+        : (candidates.find((candidate) => candidate.index === previousIndex) ??
+          null)
+    const activeCandidate =
+      candidates.find((candidate) => candidate.active) ?? null
+    const sampledCandidate =
+      candidates.find((candidate) => candidate.vector !== null) ?? null
+
+    return (
+      activeCandidate ??
+      previousCandidate ??
+      sampledCandidate ??
+      candidates[0] ??
+      null
+    )
+  }
+
+  function pollHostGamepad() {
+    const available =
+      typeof navigator !== "undefined" && !!navigator.getGamepads
+    if (!available) {
+      hostGamepadState = {
+        available: false,
+        connected: false,
+        index: null,
+        id: null,
+        mapping: null,
+        sampledStick: null,
+        axisPair: null,
+        rawAxes: [],
+        vector: null,
+        magnitude: 0,
+        candidates: [],
+      }
+      return
+    }
+
+    const sampledStick = currentHostStickMode(config?.mode ?? null)
+    const connectedGamepads = Array.from(navigator.getGamepads()).filter(
+      (gamepad): gamepad is Gamepad => gamepad !== null,
+    )
+    const candidates = connectedGamepads
+      .map((gamepad) => {
+        const rawAxes = hostGamepadRawAxes(gamepad)
+        const inferredAxisPair =
+          sampledStick && gamepad.index === hostGamepadState.index
+            ? detectedHostGamepadAxisPair
+            : null
+        const axisPair = sampledStick
+          ? gamepad.mapping === "standard"
+            ? standardHostAxisPair(sampledStick)
+            : inferredAxisPair
+          : null
+        const vector = axisPair
+          ? hostGamepadVectorFromAxisPair(gamepad, axisPair)
+          : null
+        const magnitude = vector
+          ? hostGamepadMagnitude(vector)
+          : hostGamepadFallbackMagnitude(rawAxes)
+        return {
+          index: gamepad.index,
+          id: gamepad.id,
+          mapping: gamepad.mapping,
+          axes: gamepad.axes.length,
+          buttons: gamepad.buttons.length,
+          sampledStick,
+          axisPair,
+          rawAxes,
+          vector,
+          magnitude,
+          active: magnitude >= HOST_GAMEPAD_ACTIVE_THRESHOLD,
+          selected: false,
+        }
+      })
+      .sort((left, right) => right.magnitude - left.magnitude)
+
+    if (candidates.length === 0) {
+      hostGamepadState = {
+        available: true,
+        connected: false,
+        index: null,
+        id: null,
+        mapping: null,
+        sampledStick,
+        axisPair: null,
+        rawAxes: [],
+        vector: null,
+        magnitude: 0,
+        candidates: [],
+      }
+      return
+    }
+
+    const selectedCandidate = selectHostGamepadCandidate(
+      candidates,
+      hostGamepadState.index,
+    )
+    const selectedCandidates = candidates.map((candidate) => ({
+      ...candidate,
+      selected: candidate.index === selectedCandidate?.index,
+    }))
+
+    hostGamepadState = {
+      available: true,
+      connected: selectedCandidate !== null,
+      index: selectedCandidate?.index ?? null,
+      id: selectedCandidate?.id ?? null,
+      mapping: selectedCandidate?.mapping ?? null,
+      sampledStick,
+      axisPair: selectedCandidate?.axisPair ?? null,
+      rawAxes: selectedCandidate?.rawAxes ?? [],
+      vector: selectedCandidate?.vector ?? null,
+      magnitude: selectedCandidate?.magnitude ?? 0,
+      candidates: selectedCandidates,
+    }
+  }
+
+  function buildDiagnosticLog() {
+    if (!config) return null
+
+    return {
+      generatedAt: new Date().toISOString(),
+      source: "hmkconf joystick tab",
+      keyboard: {
+        name: keyboard.metadata.name,
+        id: keyboard.id,
+        firmwareVersion: keyboard.version,
+        firmwareVersionLabel: displayVersion(keyboard.version),
+        profile,
+      },
+      transport: {
+        xInputEnabled: options?.xInputEnabled ?? null,
+        activeGamepadTransport: currentGamepadTransport,
+        joystickModeReadyForGamepadValidation:
+          config.mode === 2 || config.mode === 3,
+        hostGamepad: {
+          available: hostGamepadState.available,
+          connected: hostGamepadState.connected,
+          index: hostGamepadState.index,
+          id: hostGamepadState.id,
+          mapping: hostGamepadState.mapping,
+          sampledStick: hostGamepadState.sampledStick,
+          axisPair: hostGamepadState.axisPair,
+          rawAxes: serializeAxes(hostGamepadState.rawAxes),
+          magnitude: roundValue(hostGamepadState.magnitude),
+          candidates: hostGamepadState.candidates.map((candidate) => ({
+            index: candidate.index,
+            id: candidate.id,
+            mapping: candidate.mapping,
+            axes: candidate.axes,
+            buttons: candidate.buttons,
+            axisPair: candidate.axisPair,
+            rawAxes: serializeAxes(candidate.rawAxes),
+            magnitude: roundValue(candidate.magnitude),
+            active: candidate.active,
+            selected: candidate.selected,
+            vector: candidate.vector ? serializePoint(candidate.vector) : null,
+          })),
+          circularity: serializeCircularity(hostGamepadCircularity),
+          pointsTail: hostGamepadPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+        },
+      },
+      joystick: {
+        mode: {
+          value: config.mode,
+          label: getModeLabel(config.mode),
+        },
+        configReadbackVerified,
+        config,
+        latestState: joystickState,
+      },
+      diagnostics: {
+        live: {
+          rawCircularity: serializeCircularity(liveRawCircularity),
+          outCircularity: serializeCircularity(liveOutCircularity),
+          rawPointsTail: liveRawPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          outPointsTail: liveOutPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+        },
+        freshCapture: {
+          phase: freshCapturePhase,
+          sampleCount: freshLiveSamples.length,
+          rawCircularity: serializeCircularity(freshRawCircularity),
+          outCircularity: serializeCircularity(freshOutCircularity),
+          hostCircularity: serializeCircularity(freshHostCircularity),
+          rawPointsTail: freshRawPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          outPointsTail: freshOutPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          hostPointsTail: freshHostPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+        },
+        calibration: {
+          phase: calibrationPhase,
+          previousMode: calibrationPreviousMode,
+          centerSampleCount: centerSamplesX.length,
+          centerAssessment: {
+            stable: restAssessment.stable,
+            x: {
+              center: restAssessment.x.center,
+              spread: roundValue(restAssessment.x.spread),
+              sampleCount: restAssessment.x.sampleCount,
+              stable: restAssessment.x.stable,
+            },
+            y: {
+              center: restAssessment.y.center,
+              spread: roundValue(restAssessment.y.spread),
+              sampleCount: restAssessment.y.sampleCount,
+              stable: restAssessment.y.stable,
+            },
+          },
+          sweepSampleCount: displayedSweepRawSamples.length,
+          sweepBounds: {
+            minX,
+            maxX,
+            minY,
+            maxY,
+          },
+          sweepCircularity: serializeCircularity(sweepCircularity),
+          sweepOutputCircularity: serializeCircularity(sweepOutputCircularity),
+          displayedSweepCalibration,
+          sweepRawSamples: displayedSweepRawSamples,
+          correctedSweepPointsTail: displayedSweepPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          correctedSweepOutputPointsTail: displayedSweepOutputPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+        },
+      },
+      guidance: [
+        "If RAW circularity is poor, the issue is likely sensor or mechanics before firmware output.",
+        "If RAW is good and OUT is poor, the issue is likely firmware circular correction or deadzone behavior.",
+        `Current gamepad transport is ${currentGamepadTransport}.`,
+        supportsHostTransportComparison
+          ? "For host-side comparison, switch the joystick mode to XInput Left Stick or Right Stick, then test the same sweep twice: once with XInput enabled and once with XInput disabled."
+          : "This host only exposes the HID Gamepad path. Use firmware OUT circularity as the primary metric, and compare it against HID host capture when the joystick mode is mapped to a stick.",
+      ],
+    }
+  }
+
+  async function copyDiagnosticLog() {
+    const diagnosticLog = buildDiagnosticLog()
+    if (!diagnosticLog) return
+
+    if (!navigator.clipboard?.writeText) {
+      toast.error("Clipboard access is not available in this environment.")
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(diagnosticLog, null, 2),
+      )
+      toast.success("Joystick diagnostic log copied to clipboard.")
+    } catch (error) {
+      toast.error("Joystick diagnostic log could not be copied.")
+      console.error(error)
+    }
+  }
+
+  function resetLiveDiagnostics() {
+    liveSamples = []
+    hostGamepadSamples = []
+    hostGamepadAxesHistory = []
+    hostGamepadAxesSourceKey = null
+    hostGamepadSampleSourceKey = null
+    toast.success("Live joystick diagnostics were reset.")
+  }
+
+  function startFreshCapture() {
+    clearFreshCapture()
+    freshCapturePhase = "armed"
+    toast.success("Fresh joystick capture armed. Move the joystick to start.")
+  }
+
+  function cancelFreshCapture() {
+    clearFreshCapture()
+    toast.success("Fresh joystick capture canceled.")
+  }
+
+  function stopFreshCapture() {
+    completeFreshCapture()
   }
 </script>
 
@@ -215,6 +1278,31 @@
     </div>
 
     <!-- Mode Specific Settings -->
+    {#if supportsJoystickMousePresets && (config.mode === 1 || config.mode === 4)}
+      <div class="flex flex-col gap-3 rounded-xl border bg-card p-4">
+        <div class="grid text-sm">
+          <span class="font-medium"
+            >Mouse Preset {config.activeMousePreset + 1}</span
+          >
+          <span class="text-muted-foreground"
+            >Store four speed and acceleration pairs, then cycle them from the
+            keymap with `Joy Preset Next`.</span
+          >
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {#each config.mousePresets as preset, index (index)}
+            <Button
+              size="sm"
+              variant={index === config.activeMousePreset ? "default" : "outline"}
+              onclick={() => void selectMousePreset(index)}
+            >
+              P{index + 1}: {preset.mouseSpeed}/{preset.mouseAcceleration}
+            </Button>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     {#if config.mode === 1 || config.mode === 4}
       <div class="flex flex-col gap-2">
         <div class="grid text-sm">
@@ -226,7 +1314,7 @@
         <Slider
           type="single"
           bind:value={
-            () => config!.mouseSpeed, (v) => updateConfig({ mouseSpeed: v })
+            () => config!.mouseSpeed, (v) => updateActiveMousePreset({ mouseSpeed: v })
           }
           max={50}
           min={1}
@@ -250,7 +1338,7 @@
           type="single"
           bind:value={
             () => config!.mouseAcceleration,
-            (v) => updateConfig({ mouseAcceleration: v })
+            (v) => updateActiveMousePreset({ mouseAcceleration: v })
           }
           max={255}
           min={1}
@@ -314,6 +1402,329 @@
       </div>
     </div>
 
+    <div class="grid gap-4 lg:grid-cols-2">
+      <JoystickDiagnosticPlot
+        title="Normalized RAW Shape"
+        subtitle="ADC samples normalized with the current joystick calibration."
+        points={liveRawPoints}
+        pointClass="fill-amber-500/20"
+        lastPointClass="fill-amber-500 stroke-background stroke-2"
+      />
+      <JoystickDiagnosticPlot
+        title="Firmware OUT Shape"
+        subtitle="The common firmware output after calibration and radial deadzone."
+        points={liveOutPoints}
+        pointClass="fill-emerald-500/20"
+        lastPointClass="fill-emerald-500 stroke-background stroke-2"
+      />
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="rounded-xl border bg-card p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="grid text-sm">
+            <span class="font-medium">RAW Circularity</span>
+            <span class="text-muted-foreground">
+              Checks the common input path before transport-specific reporting.
+            </span>
+          </div>
+          <span
+            class={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              circularityTone(
+                liveRawCircularity.score,
+                liveRawCircularity.sufficient,
+              ),
+            )}
+          >
+            {liveRawCircularity.label}
+          </span>
+        </div>
+        <div class="font-mono text-3xl font-semibold">
+          {Math.round(liveRawCircularity.score)}
+        </div>
+        <div
+          class="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-muted-foreground"
+        >
+          <div>Outer Samples: {liveRawCircularity.outerSampleCount}</div>
+          <div>Quadrants: {liveRawCircularity.quadrantCoverage}/4</div>
+          <div>
+            Axis Ratio: {Math.round(liveRawCircularity.axisRatio * 100)}%
+          </div>
+          <div>
+            Radius Spread: {Math.round(liveRawCircularity.radiusSpread * 100)}%
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border bg-card p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="grid text-sm">
+            <span class="font-medium">OUT Circularity</span>
+            <span class="text-muted-foreground">
+              Captures what the shared firmware path hands to mouse or gamepad
+              logic.
+            </span>
+          </div>
+          <span
+            class={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              circularityTone(
+                liveOutCircularity.score,
+                liveOutCircularity.sufficient,
+              ),
+            )}
+          >
+            {liveOutCircularity.label}
+          </span>
+        </div>
+        <div class="font-mono text-3xl font-semibold">
+          {Math.round(liveOutCircularity.score)}
+        </div>
+        <div
+          class="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-muted-foreground"
+        >
+          <div>Outer Samples: {liveOutCircularity.outerSampleCount}</div>
+          <div>Quadrants: {liveOutCircularity.quadrantCoverage}/4</div>
+          <div>
+            Axis Ratio: {Math.round(liveOutCircularity.axisRatio * 100)}%
+          </div>
+          <div>
+            Radius Spread: {Math.round(liveOutCircularity.radiusSpread * 100)}%
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border bg-card p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="grid text-sm">
+            <span class="font-medium">Sweep Circularity</span>
+            <span class="text-muted-foreground">
+              Uses the calibration sweep to estimate the next X/Y min-center-max
+              and angle-based boundary map.
+            </span>
+          </div>
+          <span
+            class={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              circularityTone(
+                sweepCircularity.score,
+                sweepCircularity.sufficient,
+              ),
+            )}
+          >
+            {sweepCircularity.label}
+          </span>
+        </div>
+        <div class="font-mono text-3xl font-semibold">
+          {Math.round(sweepCircularity.score)}
+        </div>
+        <div
+          class="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-muted-foreground"
+        >
+          <div>Outer Samples: {sweepCircularity.outerSampleCount}</div>
+          <div>Quadrants: {sweepCircularity.quadrantCoverage}/4</div>
+          <div>Axis Ratio: {Math.round(sweepCircularity.axisRatio * 100)}%</div>
+          <div>
+            Radius Spread: {Math.round(sweepCircularity.radiusSpread * 100)}%
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border bg-card p-4">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="grid text-sm">
+          <span class="font-medium">Fresh Capture</span>
+          <span class="text-muted-foreground">{freshCaptureStatus}</span>
+        </div>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          {#if freshCapturePhase === "capturing"}
+            <Button
+              variant="outline"
+              size="sm"
+              onclick={stopFreshCapture}
+              disabled={!joystickState}
+            >
+              Stop Fresh Capture
+            </Button>
+          {:else if freshCapturePhase === "armed"}
+            <Button
+              variant="outline"
+              size="sm"
+              onclick={cancelFreshCapture}
+              disabled={!joystickState}
+            >
+              Cancel Fresh Capture
+            </Button>
+          {:else}
+            <Button
+              variant="outline"
+              size="sm"
+              onclick={startFreshCapture}
+              disabled={!joystickState || calibrationPhase !== "idle"}
+            >
+              Start Fresh Capture
+            </Button>
+          {/if}
+        </div>
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-3">
+        <div class="rounded-xl border bg-muted/20 p-4">
+          <div class="grid text-sm">
+            <span class="font-medium">Fresh RAW</span>
+            <span class="text-muted-foreground">
+              Fixed-window capture from motion start to sweep end.
+            </span>
+          </div>
+          <div class="mt-3 font-mono text-3xl font-semibold">
+            {Math.round(freshRawCircularity.score)}
+          </div>
+          <div class="mt-3 font-mono text-xs text-muted-foreground">
+            Samples: {freshLiveSamples.length}
+          </div>
+        </div>
+        <div class="rounded-xl border bg-muted/20 p-4">
+          <div class="grid text-sm">
+            <span class="font-medium">Fresh OUT</span>
+            <span class="text-muted-foreground">
+              This is the stable number to compare across sweeps.
+            </span>
+          </div>
+          <div class="mt-3 font-mono text-3xl font-semibold">
+            {Math.round(freshOutCircularity.score)}
+          </div>
+          <div class="mt-3 font-mono text-xs text-muted-foreground">
+            Samples: {freshLiveSamples.length}
+          </div>
+        </div>
+        <div class="rounded-xl border bg-muted/20 p-4">
+          <div class="grid text-sm">
+            <span class="font-medium">Fresh Host</span>
+            <span class="text-muted-foreground">
+              Host score over the same fixed capture window.
+            </span>
+          </div>
+          <div class="mt-3 font-mono text-3xl font-semibold">
+            {Math.round(freshHostCircularity.score)}
+          </div>
+          <div class="mt-3 font-mono text-xs text-muted-foreground">
+            Samples: {freshHostGamepadSamples.length}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <JoystickDiagnosticPlot
+      title="Calibration Sweep Shape"
+      subtitle="Shows the predicted firmware output after the next calibration and circular correction."
+      points={displayedSweepPoints}
+      pointClass="fill-sky-500/20"
+      lastPointClass="fill-sky-500 stroke-background stroke-2"
+    />
+
+    <div class="rounded-xl border bg-card p-4">
+      <h3 class="mb-2 text-sm font-semibold">Transport Validation</h3>
+      <div class="grid gap-2 text-sm text-muted-foreground">
+        <span>
+          These plots validate the shared firmware path first: raw ADC, per-axis
+          calibration, circular correction, and radial deadzone.
+        </span>
+        <span>
+          {transportValidationAdvice}
+        </span>
+      </div>
+      <div
+        class="mt-4 grid gap-2 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground"
+      >
+        <span>
+          Current gamepad transport: <span class="font-medium text-foreground"
+            >{currentGamepadTransport}</span
+          >
+        </span>
+        <span>{gamepadHostValidationMode}</span>
+        <span>{hostGamepadStatus}</span>
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+        <JoystickDiagnosticPlot
+          title="Host Gamepad Shape"
+          subtitle="Reads the first connected gamepad from the host using the selected left or right stick."
+          points={hostGamepadPoints}
+          pointClass="fill-fuchsia-500/20"
+          lastPointClass="fill-fuchsia-500 stroke-background stroke-2"
+        />
+        <div class="rounded-xl border bg-muted/20 p-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div class="grid text-sm">
+              <span class="font-medium">Host Circularity</span>
+              <span class="text-muted-foreground">
+                Confirms whether HID and XInput look different on the host.
+              </span>
+            </div>
+            <span
+              class={cn(
+                "rounded-full px-3 py-1 text-xs font-semibold",
+                circularityTone(
+                  hostGamepadCircularity.score,
+                  hostGamepadCircularity.sufficient,
+                ),
+              )}
+            >
+              {hostGamepadCircularity.label}
+            </span>
+          </div>
+          <div class="font-mono text-3xl font-semibold">
+            {Math.round(hostGamepadCircularity.score)}
+          </div>
+          <div
+            class="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-muted-foreground"
+          >
+            <div>Outer Samples: {hostGamepadCircularity.outerSampleCount}</div>
+            <div>Quadrants: {hostGamepadCircularity.quadrantCoverage}/4</div>
+            <div>
+              Axis Ratio: {Math.round(hostGamepadCircularity.axisRatio * 100)}%
+            </div>
+            <div>
+              Radius Spread: {Math.round(
+                hostGamepadCircularity.radiusSpread * 100,
+              )}%
+            </div>
+          </div>
+          {#if hostGamepadState.connected}
+            <div class="mt-3 text-xs text-muted-foreground">
+              Gamepad #{hostGamepadState.index}: {hostGamepadState.id}
+            </div>
+          {/if}
+        </div>
+      </div>
+      <div
+        class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <p class="text-sm text-muted-foreground">
+          Copy a structured log after calibration and paste it into chat for
+          remote diagnosis.
+        </p>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            size="sm"
+            onclick={resetLiveDiagnostics}
+            disabled={!joystickState}
+          >
+            Reset Live Diagnostics
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onclick={copyDiagnosticLog}
+            disabled={!joystickState}
+          >
+            Copy Diagnostic Log
+          </Button>
+        </div>
+      </div>
+    </div>
+
     <!-- Calibration Wizard -->
     <div class="mt-4 rounded-xl border bg-card p-4">
       <h3 class="mb-2 text-lg font-semibold">Calibration</h3>
@@ -355,7 +1766,8 @@
             </p>
             <p class="mt-1 text-sm text-muted-foreground">
               Roll it slowly around the outer edge a few times to record the
-              maximum range.
+              maximum range. Aim to cover all four quadrants while keeping the
+              Sweep Circularity card as high as possible.
             </p>
           {/if}
         </div>

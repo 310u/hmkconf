@@ -4,9 +4,14 @@ import { DataViewReader } from "$lib/data-view-reader"
 
 export const MAX_MACRO_EVENTS = 16
 export const NUM_MACROS = 16
-export const EECONFIG_MAGIC_START = 0x0b42494c
-export const EECONFIG_MAGIC_END = 0x0b4b4d48
-export const EECONFIG_VERSION = 0x010d
+export const JOYSTICK_RADIAL_BOUNDARY_SECTORS = 32
+export const JOYSTICK_RADIAL_BOUNDARY_DEFAULT = 127
+export const JOYSTICK_MOUSE_SPEED_DEFAULT = 10
+export const JOYSTICK_MOUSE_ACCELERATION_DEFAULT = 255
+export const JOYSTICK_MOUSE_PRESET_COUNT = 4
+export const EECONFIG_MAGIC_START = 0x0B42494C
+export const EECONFIG_MAGIC_END = 0x0B4B4D48
+export const EECONFIG_VERSION = 0x0110
 export const NUM_KEYS = 64
 export const NUM_LAYERS = 4
 export const NUM_PROFILES = 4
@@ -85,6 +90,7 @@ export interface GamepadOptions {
   gamepadOverride?: boolean
   squareJoystick?: boolean
   snappyJoystick?: boolean
+  socdMode?: number
   reserved?: number
   options?: number
 }
@@ -121,6 +127,11 @@ export interface JoystickAxisCalibration {
   max: number
 }
 
+export interface JoystickMousePreset {
+  mouseSpeed: number
+  mouseAcceleration: number
+}
+
 export interface JoystickConfig {
   x: JoystickAxisCalibration
   y: JoystickAxisCalibration
@@ -130,6 +141,9 @@ export interface JoystickConfig {
   mouseAcceleration: number
   swDebounceMs: number
   reserved: number[]
+  radialBoundaries: number[]
+  activeMousePreset: number
+  mousePresets: JoystickMousePreset[]
 }
 
 export interface JoystickState {
@@ -147,7 +161,7 @@ export interface EeconfigCalibration {
 
 export interface EeconfigOptions {
   xinputEnabled: number
-  Unused0: number
+  saveBottomOutThreshold: number
   highPollingRateEnabled: number
   continuousCalibration: number
   sniperModeMultiplier: number
@@ -218,9 +232,7 @@ export function parseNullBind(reader: DataViewReader): NullBind {
   return result
 }
 
-export function parseDynamicKeystroke(
-  reader: DataViewReader,
-): DynamicKeystroke {
+export function parseDynamicKeystroke(reader: DataViewReader): DynamicKeystroke {
   const result = {} as any
   result.keycodes = Array.from({ length: 4 }, () => reader.uint8())
   result.bitmap = Array.from({ length: 4 }, () => reader.uint8())
@@ -352,13 +364,18 @@ export function parseRgbConfig(reader: DataViewReader): RgbConfig {
   return result
 }
 
-export function parseJoystickAxisCalibration(
-  reader: DataViewReader,
-): JoystickAxisCalibration {
+export function parseJoystickAxisCalibration(reader: DataViewReader): JoystickAxisCalibration {
   const result = {} as any
   result.min = reader.uint16()
   result.center = reader.uint16()
   result.max = reader.uint16()
+  return result
+}
+
+export function parseJoystickMousePreset(reader: DataViewReader): JoystickMousePreset {
+  const result = {} as any
+  result.mouseSpeed = reader.uint8()
+  result.mouseAcceleration = reader.uint8()
   return result
 }
 
@@ -372,6 +389,9 @@ export function parseJoystickConfig(reader: DataViewReader): JoystickConfig {
   result.mouseAcceleration = reader.uint8()
   result.swDebounceMs = reader.uint8()
   result.reserved = Array.from({ length: 3 }, () => reader.uint8())
+  result.radialBoundaries = Array.from({ length: 32 }, () => reader.uint8())
+  result.activeMousePreset = reader.uint8()
+  result.mousePresets = Array.from({ length: 4 }, () => parseJoystickMousePreset(reader))
   return result
 }
 
@@ -385,9 +405,7 @@ export function parseJoystickState(reader: DataViewReader): JoystickState {
   return result
 }
 
-export function parseEeconfigCalibration(
-  reader: DataViewReader,
-): EeconfigCalibration {
+export function parseEeconfigCalibration(reader: DataViewReader): EeconfigCalibration {
   const result = {} as any
   result.initialRestValue = reader.uint16()
   result.initialBottomOutThreshold = reader.uint16()
@@ -403,13 +421,9 @@ export function parseEeconfigOptions(reader: DataViewReader): EeconfigOptions {
 
 export function parseEeconfigProfile(reader: DataViewReader): EeconfigProfile {
   const result = {} as any
-  result.keymap = Array.from({ length: 4 }, () =>
-    Array.from({ length: 64 }, () => reader.uint8()),
-  )
+  result.keymap = Array.from({ length: 4 }, () => Array.from({ length: 64 }, () => reader.uint8()))
   result.actuationMap = Array.from({ length: 64 }, () => parseActuation(reader))
-  result.advancedKeys = Array.from({ length: 32 }, () =>
-    parseAdvancedKey(reader),
-  )
+  result.advancedKeys = Array.from({ length: 32 }, () => parseAdvancedKey(reader))
   result.gamepadButtons = Array.from({ length: 64 }, () => reader.uint8())
   result.gamepadOptions = parseGamepadOptions(reader)
   result.tickRate = reader.uint8()
@@ -428,9 +442,7 @@ export function parseEeconfig(reader: DataViewReader): Eeconfig {
   result.options = parseEeconfigOptions(reader)
   result.currentProfile = reader.uint8()
   result.lastNonDefaultProfile = reader.uint8()
-  result.profiles = Array.from({ length: 4 }, () =>
-    parseEeconfigProfile(reader),
-  )
+  result.profiles = Array.from({ length: 4 }, () => parseEeconfigProfile(reader))
   result.magicEnd = reader.uint32()
   return result
 }

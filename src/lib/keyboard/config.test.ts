@@ -66,5 +66,12 @@ describe("keyboardConfigSchema", () => {
     expect(parsed.profile.macros).toHaveLength(1)
     expect(parsed.profile.rgbConfig?.enabled).toBe(1)
     expect(parsed.profile.joystickConfig?.mode).toBe(1)
+    expect(parsed.profile.joystickConfig?.activeMousePreset).toBe(0)
+    expect(parsed.profile.joystickConfig?.mousePresets).toHaveLength(4)
+    expect(parsed.profile.joystickConfig?.mousePresets[0]).toEqual({
+      mouseSpeed: 10,
+      mouseAcceleration: 255,
+    })
+    expect(parsed.profile.joystickConfig?.radialBoundaries).toHaveLength(32)
   })
 })

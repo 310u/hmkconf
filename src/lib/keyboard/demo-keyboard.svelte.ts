@@ -29,6 +29,10 @@ import type {
   HMK_JoystickState,
   SetJoystickConfigParams,
 } from "$lib/libhmk/commands/joystick"
+import {
+  makeDefaultJoystickMousePresets,
+  makeDefaultJoystickRadialBoundaries,
+} from "$lib/libhmk/commands/joystick"
 import type { HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
 import { HMK_GamepadButton, type HMK_GamepadOptions } from "$lib/libhmk/gamepad"
 import type {
@@ -77,6 +81,9 @@ function defaultJoystickConfig(): HMK_JoystickConfig {
     mouseSpeed: 10,
     mouseAcceleration: 255,
     swDebounceMs: 5,
+    activeMousePreset: 0,
+    mousePresets: makeDefaultJoystickMousePresets(10, 255),
+    radialBoundaries: makeDefaultJoystickRadialBoundaries(),
   }
 }
 

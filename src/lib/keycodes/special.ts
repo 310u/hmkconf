@@ -201,6 +201,13 @@ export const specialKeycodeMetadata: KeycodeMetadata[] = [
     category: "Special",
   },
   {
+    name: "Joy Preset\nNext",
+    tooltip: "Switch to the next joystick mouse preset for the current profile",
+    keycode: Keycode.SP_JOY_PRESET_NEXT,
+    webCodes: [],
+    category: "Special",
+  },
+  {
     name: "RGB\nToggle",
     tooltip: "Toggle RGB lighting on or off for the current profile",
     keycode: Keycode.SP_RGB_TOGGLE,
@@ -269,6 +276,7 @@ export function getSpecialKeycodes(numLayers: number) {
     ...[...Array(numLayers)].map((_, i) => MO(i)),
     Keycode.SP_LAYER_LOCK,
     Keycode.SP_JOY_MODE_NEXT,
+    Keycode.SP_JOY_PRESET_NEXT,
     Keycode.SP_JOY_SCROLL_MO,
     Keycode.SP_RGB_TOGGLE,
     Keycode.SP_RGB_EFFECT_NEXT,

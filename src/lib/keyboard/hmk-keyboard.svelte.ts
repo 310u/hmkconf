@@ -234,7 +234,7 @@ class HMKKeyboard implements Keyboard {
     return getJoystickState(this.commander)
   }
   async getJoystickConfig(params: GetJoystickConfigParams) {
-    return getJoystickConfig(this.commander, params)
+    return getJoystickConfig(this.commander, params, this.version)
   }
   async setJoystickConfig(params: SetJoystickConfigParams) {
     return setJoystickConfig(this.commander, params)
