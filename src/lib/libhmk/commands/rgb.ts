@@ -25,6 +25,7 @@ export type HMK_RgbColor = z.infer<typeof rgbColorSchema>
 // uint8_t layer_indicator_key;            (1 byte)
 // rgb_color_t layer_colors[NUM_LAYERS];   (NUM_LAYERS * 3 bytes)
 // rgb_color_t per_key_colors[NUM_KEYS];   (NUM_KEYS * 3 bytes)
+// rgb_color_t trigger_state_colors[4];    (12 bytes)
 //
 // Header size: 13 bytes (before layer_colors)
 
@@ -40,15 +41,22 @@ export const rgbConfigSchema = z.object({
   layerIndicatorKey: z.number(),
   layerColors: z.array(rgbColorSchema),
   perKeyColors: z.array(rgbColorSchema),
+  triggerStateColors: z.array(rgbColorSchema).length(4),
 })
 
 export type HMK_RgbConfig = z.infer<typeof rgbConfigSchema>
 
 export const GET_SET_RGB_CONFIG_MAX_ENTRIES = 59
 const RGB_CONFIG_BASE_HEADER_SIZE = 13 // enabled(1) + brightness(1) + effect(1) + solidColor(3) + secondaryColor(3) + speed(1) + sleepTimeout(1) + layerIndicatorMode(1) + layerIndicatorKey(1)
+const RGB_TRIGGER_STATE_COLOR_COUNT = 4
 
 function rgbConfigSize(numKeys: number, numLayers: number) {
-  return RGB_CONFIG_BASE_HEADER_SIZE + numLayers * 3 + numKeys * 3
+  return (
+    RGB_CONFIG_BASE_HEADER_SIZE +
+    numLayers * 3 +
+    numKeys * 3 +
+    RGB_TRIGGER_STATE_COLOR_COUNT * 3
+  )
 }
 
 export type GetRgbConfigParams = {
@@ -118,6 +126,15 @@ export async function getRgbConfig(
     })
   }
 
+  const triggerStateColors: HMK_RgbColor[] = []
+  for (let i = 0; i < RGB_TRIGGER_STATE_COLOR_COUNT; i++) {
+    triggerStateColors.push({
+      r: data[ptr++],
+      g: data[ptr++],
+      b: data[ptr++],
+    })
+  }
+
   return {
     enabled,
     globalBrightness,
@@ -130,6 +147,7 @@ export async function getRgbConfig(
     layerIndicatorKey,
     layerColors,
     perKeyColors,
+    triggerStateColors,
   }
 }
 
@@ -170,6 +188,13 @@ export async function setRgbConfig(
   for (let i = 0; i < params.numKeys; i++) {
     // If array is short for some reason, pad with 0
     const color = params.data.perKeyColors[i] || { r: 0, g: 0, b: 0 }
+    rawBytes.push(color.r)
+    rawBytes.push(color.g)
+    rawBytes.push(color.b)
+  }
+
+  for (let i = 0; i < RGB_TRIGGER_STATE_COLOR_COUNT; i++) {
+    const color = params.data.triggerStateColors[i] || { r: 0, g: 0, b: 0 }
     rawBytes.push(color.r)
     rawBytes.push(color.g)
     rawBytes.push(color.b)

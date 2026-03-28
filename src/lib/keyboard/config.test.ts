@@ -50,6 +50,12 @@ describe("keyboardConfigSchema", () => {
           layerIndicatorKey: 0,
           layerColors: [],
           perKeyColors: [],
+          triggerStateColors: [
+            { r: 63, g: 63, b: 63 },
+            { r: 255, g: 255, b: 255 },
+            { r: 255, g: 0, b: 0 },
+            { r: 255, g: 0, b: 0 },
+          ],
         },
         joystickConfig: {
           x: { min: 0, center: 2048, max: 4095 },

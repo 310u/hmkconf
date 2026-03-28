@@ -9,9 +9,10 @@ export const JOYSTICK_RADIAL_BOUNDARY_DEFAULT = 127
 export const JOYSTICK_MOUSE_SPEED_DEFAULT = 10
 export const JOYSTICK_MOUSE_ACCELERATION_DEFAULT = 255
 export const JOYSTICK_MOUSE_PRESET_COUNT = 4
+export const RGB_TRIGGER_STATE_COLOR_COUNT = 4
 export const EECONFIG_MAGIC_START = 0x0B42494C
 export const EECONFIG_MAGIC_END = 0x0B4B4D48
-export const EECONFIG_VERSION = 0x0110
+export const EECONFIG_VERSION = 0x0111
 export const NUM_KEYS = 64
 export const NUM_LAYERS = 4
 export const NUM_PROFILES = 4
@@ -119,6 +120,7 @@ export interface RgbConfig {
   layerIndicatorKey: number
   layerColors: RgbColor[]
   perKeyColors: RgbColor[]
+  triggerStateColors: RgbColor[]
 }
 
 export interface JoystickAxisCalibration {
@@ -361,6 +363,7 @@ export function parseRgbConfig(reader: DataViewReader): RgbConfig {
   result.layerIndicatorKey = reader.uint8()
   result.layerColors = Array.from({ length: 4 }, () => parseRgbColor(reader))
   result.perKeyColors = Array.from({ length: 64 }, () => parseRgbColor(reader))
+  result.triggerStateColors = Array.from({ length: RGB_TRIGGER_STATE_COLOR_COUNT }, () => parseRgbColor(reader))
   return result
 }
 

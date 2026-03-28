@@ -114,6 +114,12 @@ function defaultProfile(profile: number): DemoKeyboardProfileState {
       layerIndicatorKey: 0,
       layerColors: Array(demoMetadata.numLayers).fill({ r: 0, g: 0, b: 0 }),
       perKeyColors: Array(numKeys).fill({ r: 255, g: 0, b: 0 }),
+      triggerStateColors: [
+        { r: 63, g: 63, b: 63 },
+        { r: 255, g: 255, b: 255 },
+        { r: 255, g: 0, b: 0 },
+        { r: 255, g: 0, b: 0 },
+      ],
     },
     joystickConfig: defaultJoystickConfig(),
   }

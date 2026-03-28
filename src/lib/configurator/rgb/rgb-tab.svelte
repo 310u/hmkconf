@@ -6,13 +6,42 @@
   import * as Select from "$lib/components/ui/select"
   import { Slider } from "$lib/components/ui/slider"
   import { keyboardContext, type Keyboard } from "$lib/keyboard"
-  import type { HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
+  import type { HMK_RgbColor, HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
   import { cn, type WithoutChildren } from "$lib/utils"
   import type { HTMLAttributes } from "svelte/elements"
   import { globalStateContext } from "../context.svelte"
 
   const RGB_EFFECT_ANALOG = 51
   const RGB_EFFECT_PER_KEY = 52
+  const RGB_EFFECT_TRIGGER_STATE = 53
+  const triggerStateEditors = [
+    {
+      index: 0,
+      key: "idle",
+      label: "Idle",
+      description: "Released and inactive",
+    },
+    {
+      index: 1,
+      key: "release",
+      label: "Release",
+      description: "Moving upward after reset",
+    },
+    {
+      index: 2,
+      key: "press",
+      label: "Press",
+      description: "Pressed while moving downward",
+    },
+    {
+      index: 3,
+      key: "hold",
+      label: "Hold",
+      description: "Pressed without active trigger motion",
+    },
+  ] as const
+
+  type TriggerPreviewState = (typeof triggerStateEditors)[number]["key"]
 
   const {
     class: className,
@@ -128,6 +157,27 @@
     updateConfig({ perKeyColors: newPerKeyColors })
   }
 
+  function triggerStateColor(index: number) {
+    return (
+      rgbConfig?.triggerStateColors[index] ?? {
+        r: 0,
+        g: 0,
+        b: 0,
+      }
+    )
+  }
+
+  function updateTriggerStateColor(
+    index: number,
+    channel: keyof HMK_RgbColor,
+    value: number,
+  ) {
+    if (!rgbConfig) return
+    const nextColors = rgbConfig.triggerStateColors.map((color) => ({ ...color }))
+    nextColors[index] = { ...nextColors[index], [channel]: value }
+    updateConfig({ triggerStateColors: nextColors })
+  }
+
   const effects = [
     { value: "0", label: "Off" },
     { value: "1", label: "Solid Color" },
@@ -182,6 +232,7 @@
     { value: "50", label: "Riverflow" },
     { value: "51", label: "Analog Keypress" },
     { value: "52", label: "Per-Key / Static" },
+    { value: "53", label: "Trigger State" },
   ]
   const ledIndexByKey = $derived.by(() => {
     const indices = Array<number | undefined>(metadata.numKeys).fill(undefined)
@@ -534,6 +585,14 @@
     return `rgb(${clamp8(r)}, ${clamp8(g)}, ${clamp8(b)})`
   }
 
+  function scaleRgbColor(color: HMK_RgbColor, brightness: number) {
+    return {
+      r: (color.r * brightness) / 255,
+      g: (color.g * brightness) / 255,
+      b: (color.b * brightness) / 255,
+    }
+  }
+
   function ledCoordsByIndex(ledIndex: number) {
     return metadata.ledCoords?.[ledIndex] ?? { x: 0, y: 0 }
   }
@@ -600,6 +659,21 @@
       if (clamped < best) best = clamped
     }
     return sources.length ? best : 255
+  }
+
+  function previewTriggerState(ledIndex: number): TriggerPreviewState {
+    for (let i = previewPresses.length - 1; i >= 0; i--) {
+      const press = previewPresses[i]
+      if (press.ledIndex !== ledIndex) continue
+
+      const ageFrames = time - press.time
+      if (ageFrames < 0) break
+      if (ageFrames < 2) return "press"
+      if (ageFrames < 4) return "hold"
+      if (ageFrames < 7) return "release"
+      break
+    }
+    return "idle"
   }
 
   function getLedColor(keyIndex: number) {
@@ -929,6 +1003,13 @@
           (pressedB * dist + bgB * (255 - dist)) / 255,
         )
       }
+      case RGB_EFFECT_TRIGGER_STATE: {
+        const state = previewTriggerState(ledIndex)
+        const colorIndex =
+          state === "press" ? 2 : state === "hold" ? 3 : state === "release" ? 1 : 0
+        const color = scaleRgbColor(triggerStateColor(colorIndex), effectiveBrightness)
+        return rgbCss(color.r, color.g, color.b)
+      }
       case RGB_EFFECT_PER_KEY: {
         const color = rgbConfig.perKeyColors[ledIndex] || { r: 0, g: 0, b: 0 }
         const r = (color.r * effectiveBrightness) / 255
@@ -1058,7 +1139,7 @@
       {/if}
 
       <!-- Color Picker (shows for effects that use it) -->
-      {#if rgbConfig.currentEffect !== 0}
+      {#if rgbConfig.currentEffect !== 0 && rgbConfig.currentEffect !== RGB_EFFECT_TRIGGER_STATE}
         <div class="flex flex-col gap-2">
           <div class="grid text-sm text-wrap">
             <span class="font-semibold">
@@ -1193,6 +1274,70 @@
                 .r}, {rgbConfig.secondaryColor.g}, {rgbConfig.secondaryColor
                 .b})"
             ></div>
+          </div>
+        </div>
+      {/if}
+
+      {#if rgbConfig.currentEffect === RGB_EFFECT_TRIGGER_STATE}
+        <div class="flex flex-col gap-3">
+          <div class="grid text-sm">
+            <span class="font-semibold">Trigger State Colors</span>
+            <span class="text-muted-foreground">
+              Set an individual RGB color for each trigger state preview.
+            </span>
+          </div>
+          <div class="grid gap-4 lg:grid-cols-2">
+            {#each triggerStateEditors as editor (editor.index)}
+              <div class="flex flex-col gap-3 rounded-md border p-4">
+                <div class="grid text-sm">
+                  <span class="font-semibold">{editor.label}</span>
+                  <span class="text-muted-foreground">{editor.description}</span>
+                </div>
+                <div class="grid grid-cols-[auto_1fr] items-center gap-4">
+                  <span class="w-4 text-sm font-medium text-red-500">R</span>
+                  <Slider
+                    type="single"
+                    bind:value={
+                      () => triggerStateColor(editor.index).r,
+                      (v) => updateTriggerStateColor(editor.index, "r", v)
+                    }
+                    max={255}
+                    step={1}
+                  />
+                </div>
+                <div class="grid grid-cols-[auto_1fr] items-center gap-4">
+                  <span class="w-4 text-sm font-medium text-green-500">G</span>
+                  <Slider
+                    type="single"
+                    bind:value={
+                      () => triggerStateColor(editor.index).g,
+                      (v) => updateTriggerStateColor(editor.index, "g", v)
+                    }
+                    max={255}
+                    step={1}
+                  />
+                </div>
+                <div class="grid grid-cols-[auto_1fr] items-center gap-4">
+                  <span class="w-4 text-sm font-medium text-blue-500">B</span>
+                  <Slider
+                    type="single"
+                    bind:value={
+                      () => triggerStateColor(editor.index).b,
+                      (v) => updateTriggerStateColor(editor.index, "b", v)
+                    }
+                    max={255}
+                    step={1}
+                  />
+                </div>
+                <div
+                  class="mt-1 h-8 w-full rounded-md border shadow-sm"
+                  style="background-color: rgb({triggerStateColor(editor.index)
+                    .r}, {triggerStateColor(editor.index).g}, {triggerStateColor(
+                    editor.index,
+                  ).b})"
+                ></div>
+              </div>
+            {/each}
           </div>
         </div>
       {/if}
