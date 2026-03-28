@@ -145,7 +145,7 @@ describe("joystick diagnostics", () => {
     boundaries[4] = 145
     boundaries[5] = 127
 
-    const angle = ((3.5 * Math.PI) / 16)
+    const angle = (3.5 * Math.PI) / 16
     const point = {
       x: Math.cos(angle) * 164,
       y: Math.sin(angle) * 164,

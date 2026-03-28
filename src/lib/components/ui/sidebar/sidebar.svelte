@@ -61,8 +61,8 @@
     class={cn(
       "group peer relative flex h-svh shrink-0 overflow-hidden text-sidebar-foreground transition-[width] duration-200 ease-linear",
       variant === "floating" || variant === "inset"
-        ? "w-(--sidebar-width) p-2 group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-        : "w-(--sidebar-width) group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+        ? "w-(--sidebar-width) p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] group-data-[collapsible=offcanvas]:w-0"
+        : "w-(--sidebar-width) group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[collapsible=offcanvas]:w-0",
       className,
     )}
     data-state={sidebar.state}

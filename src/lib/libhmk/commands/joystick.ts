@@ -98,8 +98,8 @@ export function normalizeJoystickConfigPresets(
   }
 }
 
-export const joystickConfigSchema = joystickConfigBaseSchema.transform((config) =>
-  normalizeJoystickConfigPresets(config),
+export const joystickConfigSchema = joystickConfigBaseSchema.transform(
+  (config) => normalizeJoystickConfigPresets(config),
 )
 export type HMK_JoystickConfig = z.output<typeof joystickConfigSchema>
 
@@ -267,14 +267,16 @@ export async function setJoystickConfig(
   for (let i = 0; i < HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS; i++) {
     view.setUint8(21 + i, params.config.radialBoundaries[i] ?? 127)
   }
-  view.setUint8(21 + HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS, params.config.activeMousePreset)
+  view.setUint8(
+    21 + HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS,
+    params.config.activeMousePreset,
+  )
   for (let i = 0; i < HMK_JOYSTICK_MOUSE_PRESET_COUNT; i++) {
     const preset = params.config.mousePresets[i] ?? {
       mouseSpeed: params.config.mouseSpeed,
       mouseAcceleration: params.config.mouseAcceleration,
     }
-    const offset =
-      22 + HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS + i * 2
+    const offset = 22 + HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS + i * 2
     view.setUint8(offset, preset.mouseSpeed)
     view.setUint8(offset + 1, preset.mouseAcceleration)
   }

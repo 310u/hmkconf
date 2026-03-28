@@ -15,9 +15,11 @@
 
 import z from "zod"
 
+const UINT32_MAX = 2 ** 32 - 1
+
 export const uint8Schema = z.int().min(0x00).max(0xff)
 export const uint16Schema = z.int().min(0x00).max(0xffff)
-export const uint32Schema = z.int().min(0x00).max(0xffffffff)
+export const uint32Schema = z.int().min(0x00).max(UINT32_MAX)
 
 export function displayUInt8(v: number) {
   return `0x${v.toString(16).padStart(2, "0")}`

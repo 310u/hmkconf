@@ -17,9 +17,9 @@
   import { globalStateContext } from "../context.svelte"
   import JoystickDiagnosticPlot from "./joystick-diagnostic-plot.svelte"
   import {
-    assessJoystickRestSamples,
     applyJoystickCircularCorrection,
     applyJoystickRadialDeadzone,
+    assessJoystickRestSamples,
     buildCalibrationCandidate,
     buildJoystickDiagnosticSample,
     computeJoystickCircularity,
@@ -278,7 +278,10 @@
 
     if (!diagnosticConfig) return
 
-    const sample = buildJoystickDiagnosticSample(joystickState, diagnosticConfig)
+    const sample = buildJoystickDiagnosticSample(
+      joystickState,
+      diagnosticConfig,
+    )
 
     liveSamples = pushBoundedSample(
       untrack(() => liveSamples),
@@ -431,10 +434,14 @@
     )
   }
   const liveReferenceOutPoints = $derived.by(() =>
-    diagnosticConfig ? liveRawPoints.map((point) => predictFirmwareOutput(point)) : [],
+    diagnosticConfig
+      ? liveRawPoints.map((point) => predictFirmwareOutput(point))
+      : [],
   )
   const livePredictedLinuxHostPoints = $derived.by(() =>
-    liveReferenceOutPoints.map((point) => predictLinuxJoydevGamepadPoint(point)),
+    liveReferenceOutPoints.map((point) =>
+      predictLinuxJoydevGamepadPoint(point),
+    ),
   )
   const freshRawPoints = $derived.by(() =>
     freshLiveSamples.map((sample) => sample.raw),
@@ -445,16 +452,22 @@
     ),
   )
   const freshCorrectedPoints = $derived.by(() =>
-    freshLiveSamples.flatMap((sample) => (sample.corrected ? [sample.corrected] : [])),
+    freshLiveSamples.flatMap((sample) =>
+      sample.corrected ? [sample.corrected] : [],
+    ),
   )
   const freshOutPoints = $derived.by(() =>
     freshLiveSamples.map((sample) => sample.out),
   )
   const freshReferenceOutPoints = $derived.by(() =>
-    diagnosticConfig ? freshRawPoints.map((point) => predictFirmwareOutput(point)) : [],
+    diagnosticConfig
+      ? freshRawPoints.map((point) => predictFirmwareOutput(point))
+      : [],
   )
   const freshPredictedLinuxHostPoints = $derived.by(() =>
-    freshReferenceOutPoints.map((point) => predictLinuxJoydevGamepadPoint(point)),
+    freshReferenceOutPoints.map((point) =>
+      predictLinuxJoydevGamepadPoint(point),
+    ),
   )
   const freshHostPoints = $derived.by(() => freshHostGamepadSamples)
   const hostGamepadPoints = $derived.by(() => hostGamepadSamples)
@@ -465,10 +478,14 @@
     computeJoystickCircularity(liveRawPoints),
   )
   const liveCalibratedPoints = $derived.by(() =>
-    liveSamples.flatMap((sample) => (sample.calibrated ? [sample.calibrated] : [])),
+    liveSamples.flatMap((sample) =>
+      sample.calibrated ? [sample.calibrated] : [],
+    ),
   )
   const liveCorrectedPoints = $derived.by(() =>
-    liveSamples.flatMap((sample) => (sample.corrected ? [sample.corrected] : [])),
+    liveSamples.flatMap((sample) =>
+      sample.corrected ? [sample.corrected] : [],
+    ),
   )
   const liveCalibratedCircularity = $derived.by(() =>
     computeJoystickCircularity(liveCalibratedPoints),
@@ -966,7 +983,10 @@
   async function selectMousePreset(index: number) {
     if (!config || !supportsJoystickMousePresets) return
 
-    const nextIndex = Math.max(0, Math.min(index, config.mousePresets.length - 1))
+    const nextIndex = Math.max(
+      0,
+      Math.min(index, config.mousePresets.length - 1),
+    )
     const preset = config.mousePresets[nextIndex]
 
     await updateConfig({
@@ -1085,7 +1105,10 @@
             ? { mode: restoredMode }
             : {}),
         }
-        await keyboard.setJoystickConfig({ profile: targetProfile, config: updated })
+        await keyboard.setJoystickConfig({
+          profile: targetProfile,
+          config: updated,
+        })
       }
 
       const persisted = await keyboard.getJoystickConfig({ profile })
@@ -1165,7 +1188,10 @@
     gamepad: Gamepad,
     axisPair: [number, number],
   ): JoystickVector | null {
-    return hostGamepadVectorFromRawAxes(gamepad.axes as unknown as number[], axisPair)
+    return hostGamepadVectorFromRawAxes(
+      gamepad.axes as unknown as number[],
+      axisPair,
+    )
   }
 
   function hostGamepadFallbackMagnitude(rawAxes: number[]) {
@@ -1220,7 +1246,8 @@
 
     if (activeAxes.length < 2) return null
 
-    let bestCircularPair: { pair: [number, number]; score: number } | null = null
+    let bestCircularPair: { pair: [number, number]; score: number } | null =
+      null
     let bestSpanPair: { pair: [number, number]; score: number } | null = null
     for (let leftIndex = 0; leftIndex < activeAxes.length; leftIndex += 1) {
       for (
@@ -1727,7 +1754,9 @@
           {#each config.mousePresets as preset, index (index)}
             <Button
               size="sm"
-              variant={index === config.activeMousePreset ? "default" : "outline"}
+              variant={index === config.activeMousePreset
+                ? "default"
+                : "outline"}
               onclick={() => void selectMousePreset(index)}
             >
               P{index + 1}: {preset.mouseSpeed}/{preset.mouseAcceleration}
@@ -1748,7 +1777,8 @@
         <Slider
           type="single"
           bind:value={
-            () => config!.mouseSpeed, (v) => updateActiveMousePreset({ mouseSpeed: v })
+            () => config!.mouseSpeed,
+            (v) => updateActiveMousePreset({ mouseSpeed: v })
           }
           max={50}
           min={1}
@@ -1843,9 +1873,10 @@
       </div>
       {#if joystickState && joystickState.profile !== profile}
         <p class="mt-3 text-xs text-amber-600">
-          The device is currently running profile {joystickState.profile}, but this
-          tab is showing config for profile {profile}. Diagnostics below use the
-          runtime profile config when available, but edits still apply to profile
+          The device is currently running profile {joystickState.profile}, but
+          this tab is showing config for profile {profile}. Diagnostics below
+          use the runtime profile config when available, but edits still apply
+          to profile
           {profile}.
         </p>
       {/if}
@@ -1956,7 +1987,8 @@
           <div class="grid text-sm">
             <span class="font-medium">Reference OUT Circularity</span>
             <span class="text-muted-foreground">
-              Host-side prediction from RAW, circular correction, and radial deadzone.
+              Host-side prediction from RAW, circular correction, and radial
+              deadzone.
             </span>
           </div>
           <span
@@ -1977,13 +2009,19 @@
         <div
           class="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-muted-foreground"
         >
-          <div>Outer Samples: {liveReferenceOutCircularity.outerSampleCount}</div>
+          <div>
+            Outer Samples: {liveReferenceOutCircularity.outerSampleCount}
+          </div>
           <div>Quadrants: {liveReferenceOutCircularity.quadrantCoverage}/4</div>
           <div>
-            Axis Ratio: {Math.round(liveReferenceOutCircularity.axisRatio * 100)}%
+            Axis Ratio: {Math.round(
+              liveReferenceOutCircularity.axisRatio * 100,
+            )}%
           </div>
           <div>
-            Radius Spread: {Math.round(liveReferenceOutCircularity.radiusSpread * 100)}%
+            Radius Spread: {Math.round(
+              liveReferenceOutCircularity.radiusSpread * 100,
+            )}%
           </div>
         </div>
       </div>
@@ -2026,7 +2064,9 @@
     </div>
 
     <div class="rounded-xl border bg-card p-4">
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div
+        class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+      >
         <div class="grid text-sm">
           <span class="font-medium">Fresh Capture</span>
           <span class="text-muted-foreground">{freshCaptureStatus}</span>
@@ -2158,8 +2198,8 @@
           {/if}
           <span>{liveLinuxHostInterpretation}</span>
           <span>
-            Default Linux joydev reference from firmware OUT
-            (reference only, ignores jscal overrides):
+            Default Linux joydev reference from firmware OUT (reference only,
+            ignores jscal overrides):
             <span class="font-medium text-foreground"
               >{Math.round(livePredictedLinuxHostCircularity.score)}</span
             >

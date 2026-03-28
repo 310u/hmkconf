@@ -173,7 +173,9 @@
     value: number,
   ) {
     if (!rgbConfig) return
-    const nextColors = rgbConfig.triggerStateColors.map((color) => ({ ...color }))
+    const nextColors = rgbConfig.triggerStateColors.map((color) => ({
+      ...color,
+    }))
     nextColors[index] = { ...nextColors[index], [channel]: value }
     updateConfig({ triggerStateColors: nextColors })
   }
@@ -1006,8 +1008,17 @@
       case RGB_EFFECT_TRIGGER_STATE: {
         const state = previewTriggerState(ledIndex)
         const colorIndex =
-          state === "press" ? 2 : state === "hold" ? 3 : state === "release" ? 1 : 0
-        const color = scaleRgbColor(triggerStateColor(colorIndex), effectiveBrightness)
+          state === "press"
+            ? 2
+            : state === "hold"
+              ? 3
+              : state === "release"
+                ? 1
+                : 0
+        const color = scaleRgbColor(
+          triggerStateColor(colorIndex),
+          effectiveBrightness,
+        )
         return rgbCss(color.r, color.g, color.b)
       }
       case RGB_EFFECT_PER_KEY: {
@@ -1291,7 +1302,8 @@
               <div class="flex flex-col gap-3 rounded-md border p-4">
                 <div class="grid text-sm">
                   <span class="font-semibold">{editor.label}</span>
-                  <span class="text-muted-foreground">{editor.description}</span>
+                  <span class="text-muted-foreground">{editor.description}</span
+                  >
                 </div>
                 <div class="grid grid-cols-[auto_1fr] items-center gap-4">
                   <span class="w-4 text-sm font-medium text-red-500">R</span>
@@ -1332,9 +1344,8 @@
                 <div
                   class="mt-1 h-8 w-full rounded-md border shadow-sm"
                   style="background-color: rgb({triggerStateColor(editor.index)
-                    .r}, {triggerStateColor(editor.index).g}, {triggerStateColor(
-                    editor.index,
-                  ).b})"
+                    .r}, {triggerStateColor(editor.index)
+                    .g}, {triggerStateColor(editor.index).b})"
                 ></div>
               </div>
             {/each}

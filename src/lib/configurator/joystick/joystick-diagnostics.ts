@@ -78,8 +78,12 @@ const REST_CENTER_MAX_SPREAD = 64
 const RADIAL_BOUNDARY_TUNING_FOLDS = 4
 const RADIAL_BOUNDARY_TUNING_MIN_SAMPLES = 128
 const RADIAL_BOUNDARY_TUNING_PERCENTILES = [0.8, 0.84, 0.88, 0.9] as const
-const RADIAL_BOUNDARY_TUNING_SHRINK_FACTORS = [0.84, 0.88, 0.92, 0.96, 1] as const
-const AXIS_RANGE_TUNING_FACTORS = [0.86, 0.9, 0.94, 0.98, 1, 1.02, 1.04, 1.06] as const
+const RADIAL_BOUNDARY_TUNING_SHRINK_FACTORS = [
+  0.84, 0.88, 0.92, 0.96, 1,
+] as const
+const AXIS_RANGE_TUNING_FACTORS = [
+  0.86, 0.9, 0.94, 0.98, 1, 1.02, 1.04, 1.06,
+] as const
 const RADIAL_BOUNDARY_TUNING_HOLDOUT_WEIGHT = 0.9
 const RADIAL_BOUNDARY_TUNING_FULL_WEIGHT = 0.1
 const LINUX_JOYDEV_AXIS_MIN = -128
@@ -141,7 +145,8 @@ function sectorFloat(point: JoystickVector) {
 
 function boundarySample(boundaries: number[], index: number) {
   const value =
-    boundaries[circularSectorIndex(index)] ?? HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT
+    boundaries[circularSectorIndex(index)] ??
+    HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT
 
   return value > 0 ? value : HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT
 }
@@ -250,9 +255,10 @@ function fillMissingRadialBoundaries(boundaries: number[], seen: boolean[]) {
 
 function circularSectorIndex(index: number) {
   return (
-    (index % HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS) +
+    ((index % HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS) +
+      HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS) %
     HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS
-  ) % HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS
+  )
 }
 
 function relaxRadialBoundarySpikes(boundaries: number[]) {
@@ -265,9 +271,7 @@ function relaxRadialBoundarySpikes(boundaries: number[]) {
       const neighborAverage = (previous + next) / 2
       const deviation = boundary - neighborAverage
 
-      if (
-        Math.abs(deviation) <= RADIAL_BOUNDARY_MAX_NEIGHBOR_DEVIATION
-      ) {
+      if (Math.abs(deviation) <= RADIAL_BOUNDARY_MAX_NEIGHBOR_DEVIATION) {
         return boundary
       }
 
@@ -289,10 +293,10 @@ function sampleQuantile(sortedSamples: number[], ratio: number) {
     return 0
   }
 
-  const index = clamp(
-    Math.round((sortedSamples.length - 1) * ratio),
-    [0, sortedSamples.length - 1],
-  )
+  const index = clamp(Math.round((sortedSamples.length - 1) * ratio), [
+    0,
+    sortedSamples.length - 1,
+  ])
   return sortedSamples[index]
 }
 
@@ -339,9 +343,10 @@ function shrinkRadialBoundaries(boundaries: number[], shrinkFactor: number) {
     return [...boundaries]
   }
 
-  return boundaries.map((boundary) =>
-    HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT +
-    (boundary - HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT) * shrinkFactor,
+  return boundaries.map(
+    (boundary) =>
+      HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT +
+      (boundary - HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT) * shrinkFactor,
   )
 }
 
@@ -433,10 +438,15 @@ function applyLinuxJoydevAxisCorrection(
     corrected = (coefficient * (quantized - lowerDeadzoneEdge)) >> 14
   }
 
-  return clamp(corrected, [-LINUX_JOYDEV_AXIS_OUTPUT_MAX, LINUX_JOYDEV_AXIS_OUTPUT_MAX])
+  return clamp(corrected, [
+    -LINUX_JOYDEV_AXIS_OUTPUT_MAX,
+    LINUX_JOYDEV_AXIS_OUTPUT_MAX,
+  ])
 }
 
-export function predictLinuxJoydevGamepadPoint(point: JoystickVector): JoystickVector {
+export function predictLinuxJoydevGamepadPoint(
+  point: JoystickVector,
+): JoystickVector {
   return {
     x:
       (applyLinuxJoydevAxisCorrection(point.x) * CIRCULAR_TARGET_MAGNITUDE) /
@@ -581,10 +591,7 @@ function collectCalibrationEnvelope(
     const sorted = [...bucket].sort((left, right) => left - right)
     const percentileIndex = Math.min(
       sorted.length - 1,
-      Math.max(
-        0,
-        Math.ceil(sorted.length * calibrationPercentile) - 1,
-      ),
+      Math.max(0, Math.ceil(sorted.length * calibrationPercentile) - 1),
     )
 
     return sorted[percentileIndex]
@@ -658,7 +665,10 @@ export function buildCalibrationCandidate(
   maxY: number,
   sweepSamples: JoystickDiagnosticRawSample[] = [],
 ): JoystickCalibrationCandidate | null {
-  const restAssessment = assessJoystickRestSamples(centerSamplesX, centerSamplesY)
+  const restAssessment = assessJoystickRestSamples(
+    centerSamplesX,
+    centerSamplesY,
+  )
   if (
     restAssessment.x.sampleCount === 0 ||
     restAssessment.y.sampleCount === 0
@@ -695,14 +705,14 @@ function scaleAxisCalibrationRange(
 ): HMK_JoystickAxisCalibration {
   const negativeRange = Math.max(100, calibration.center - calibration.min)
   const positiveRange = Math.max(100, calibration.max - calibration.center)
-  const scaledNegativeRange = clamp(
-    Math.round(negativeRange * rangeFactor),
-    [100, calibration.center - ADC_MIN_FALLBACK],
-  )
-  const scaledPositiveRange = clamp(
-    Math.round(positiveRange * rangeFactor),
-    [100, ADC_MAX_FALLBACK - calibration.center],
-  )
+  const scaledNegativeRange = clamp(Math.round(negativeRange * rangeFactor), [
+    100,
+    calibration.center - ADC_MIN_FALLBACK,
+  ])
+  const scaledPositiveRange = clamp(Math.round(positiveRange * rangeFactor), [
+    100,
+    ADC_MAX_FALLBACK - calibration.center,
+  ])
 
   return {
     min: calibration.center - scaledNegativeRange,
@@ -729,7 +739,9 @@ function correctedCircularityScore(
   radialBoundaries: number[],
 ) {
   return computeJoystickCircularity(
-    points.map((point) => applyJoystickCircularCorrection(point, radialBoundaries)),
+    points.map((point) =>
+      applyJoystickCircularCorrection(point, radialBoundaries),
+    ),
   ).score
 }
 
