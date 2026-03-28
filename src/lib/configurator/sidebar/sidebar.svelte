@@ -21,17 +21,17 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   import VersionFooter from "./version-footer.svelte"
 </script>
 
-<Tabs.List>
-  <Sidebar.Root collapsible="icon">
-    <Sidebar.Header>
-      <KeyboardMenu />
-    </Sidebar.Header>
-    <Sidebar.Content>
+<Sidebar.Root collapsible="icon">
+  <Sidebar.Header>
+    <KeyboardMenu />
+  </Sidebar.Header>
+  <Sidebar.Content>
+    <Tabs.List>
       <SidebarTabs />
-    </Sidebar.Content>
-    <Sidebar.Footer>
-      <VersionFooter />
-    </Sidebar.Footer>
-    <Sidebar.Rail />
-  </Sidebar.Root>
-</Tabs.List>
+    </Tabs.List>
+  </Sidebar.Content>
+  <Sidebar.Footer>
+    <VersionFooter />
+  </Sidebar.Footer>
+  <Sidebar.Rail />
+</Sidebar.Root>
