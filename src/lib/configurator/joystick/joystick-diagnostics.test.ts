@@ -5,9 +5,59 @@ import {
   buildRadialBoundaries,
   computeJoystickCircularity,
   normalizeRawPoint,
+  optimizeCalibrationCandidate,
+  predictLinuxJoydevGamepadPoint,
 } from "./joystick-diagnostics"
 
 describe("joystick diagnostics", () => {
+  function denormalizeAxis(
+    value: number,
+    center: number,
+    negativeRange: number,
+    positiveRange: number,
+  ) {
+    if (value >= 0) {
+      return Math.round(center + (value * positiveRange) / 127)
+    }
+
+    return Math.round(center + (value * negativeRange) / 128)
+  }
+
+  function makeSweepSamples(
+    count: number,
+    angleOffset = 0,
+    radialScale: (angle: number) => number = () => 1,
+  ) {
+    const centerX = 2048
+    const centerY = 2048
+    const trueXNegativeRange = 1150
+    const trueXPositiveRange = 1150
+    const trueYNegativeRange = 1275
+    const trueYPositiveRange = 1275
+
+    return Array.from({ length: count }, (_, index) => {
+      const angle = angleOffset + (Math.PI * 2 * index) / count
+      const radius = 127 * radialScale(angle)
+      const normalizedX = Math.cos(angle) * radius
+      const normalizedY = Math.sin(angle) * radius
+
+      return {
+        x: denormalizeAxis(
+          normalizedX,
+          centerX,
+          trueXNegativeRange,
+          trueXPositiveRange,
+        ),
+        y: denormalizeAxis(
+          normalizedY,
+          centerY,
+          trueYNegativeRange,
+          trueYPositiveRange,
+        ),
+      }
+    })
+  }
+
   it("normalizes raw joystick samples using the same signed ranges as firmware", () => {
     const point = normalizeRawPoint(
       { x: 3072, y: 1024 },
@@ -145,5 +195,84 @@ describe("joystick diagnostics", () => {
 
     expect(report.score).toBeGreaterThan(90)
     expect(report.label).toBe("Excellent")
+  })
+
+  it("optimizes axis ranges alongside radial boundaries for noisy sweeps", () => {
+    const sweepSamples = makeSweepSamples(
+      256,
+      0,
+      (angle) => 1 + Math.sin(angle * 3) * 0.06 + Math.cos(angle * 2) * 0.03,
+    )
+    const holdoutSamples = makeSweepSamples(
+      160,
+      Math.PI / 160,
+      (angle) => 1 + Math.sin(angle * 3) * 0.06 + Math.cos(angle * 2) * 0.03,
+    )
+    const candidate = buildCalibrationCandidate(
+      [2047, 2048, 2049, 2048],
+      [2047, 2048, 2048, 2049],
+      2048 - 1224,
+      2048 + 1224,
+      2048 - 1224,
+      2048 + 1224,
+      sweepSamples,
+    )
+
+    expect(candidate).not.toBeNull()
+
+    const optimized = optimizeCalibrationCandidate(candidate!, sweepSamples)
+    const baselineReport = computeJoystickCircularity(
+      holdoutSamples.map((sample) =>
+        applyJoystickCircularCorrection(
+          normalizeRawPoint(sample, candidate!),
+          candidate!.radialBoundaries,
+        ),
+      ),
+    )
+    const optimizedReport = computeJoystickCircularity(
+      holdoutSamples.map((sample) =>
+        applyJoystickCircularCorrection(
+          normalizeRawPoint(sample, optimized),
+          optimized.radialBoundaries,
+        ),
+      ),
+    )
+
+    expect(optimizedReport.score).toBeGreaterThan(baselineReport.score)
+    expect(optimizedReport.score).toBeGreaterThan(95)
+  })
+
+  it("models Linux joydev deadzone compression from int8 HID axes", () => {
+    expect(predictLinuxJoydevGamepadPoint({ x: 0, y: 0 })).toEqual({
+      x: 0,
+      y: 0,
+    })
+    expect(predictLinuxJoydevGamepadPoint({ x: 15, y: -15 })).toEqual({
+      x: 0,
+      y: 0,
+    })
+
+    const corrected = predictLinuxJoydevGamepadPoint({ x: 127, y: -127 })
+    expect(corrected.x).toBeCloseTo(127, 5)
+    expect(corrected.y).toBeCloseTo(-127, 5)
+  })
+
+  it("predicts lower circularity for Linux joydev host capture than firmware out", () => {
+    const circle = Array.from({ length: 256 }, (_, index) => {
+      const angle = (Math.PI * 2 * index) / 256
+      return {
+        x: Math.cos(angle) * 127,
+        y: Math.sin(angle) * 127,
+      }
+    })
+
+    const firmwareReport = computeJoystickCircularity(circle)
+    const linuxJoydevReport = computeJoystickCircularity(
+      circle.map((point) => predictLinuxJoydevGamepadPoint(point)),
+    )
+
+    expect(firmwareReport.score).toBeGreaterThan(95)
+    expect(linuxJoydevReport.score).toBeLessThan(firmwareReport.score)
+    expect(linuxJoydevReport.score).toBeLessThan(90)
   })
 })

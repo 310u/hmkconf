@@ -25,6 +25,7 @@
     computeJoystickCircularity,
     normalizeRawPoint,
     optimizeCalibrationCandidate,
+    predictLinuxJoydevGamepadPoint,
     pushBoundedSample,
     type JoystickCalibrationCandidate,
     type JoystickDiagnosticRawSample,
@@ -42,6 +43,10 @@
   const HOST_GAMEPAD_AXIS_SPAN_THRESHOLD = 0.35
   const HOST_GAMEPAD_AXIS_BIPOLAR_THRESHOLD = 0.2
   const HOST_GAMEPAD_AXIS_PAIR_SCORE_THRESHOLD = 0.8
+  const LINUX_JOYDEV_PREDICTION_ASSUMPTION =
+    "Default Linux joydev correction without a jscal override."
+  const LINUX_JOYDEV_PREDICTION_ROLE =
+    "Reference only for the default Linux joydev path. Ignores jscal overrides; measured host capture is authoritative when available."
 
   const {
     class: className,
@@ -52,6 +57,9 @@
   const { profile, tab } = $derived(globalStateContext.get())
 
   let config = $state<HMK_JoystickConfig | null>(null)
+  let runtimeProfileConfig = $state<HMK_JoystickConfig | null>(null)
+  let runtimeProfileConfigProfile = $state<number | null>(null)
+  let runtimeProfileConfigPending = $state<number | null>(null)
   let options = $state<HMK_Options | null>(null)
   let joystickState = $state<HMK_JoystickState | null>(null)
   let loading = $state(true)
@@ -112,6 +120,8 @@
     candidates: [],
   })
 
+  type CircularityReport = ReturnType<typeof computeJoystickCircularity>
+
   $effect(() => {
     if (tab !== "joystick") return
 
@@ -128,6 +138,9 @@
     sweepRawSamples = []
     lastSweepRawSamples = []
     lastSweepCalibration = null
+    runtimeProfileConfig = null
+    runtimeProfileConfigProfile = null
+    runtimeProfileConfigPending = null
     configReadbackVerified = null
     hostGamepadState = {
       available: typeof navigator !== "undefined" && !!navigator.getGamepads,
@@ -205,9 +218,67 @@
   })
 
   $effect(() => {
+    if (tab !== "joystick" || !keyboard.getJoystickConfig) return
+
+    const runtimeProfile = joystickState?.profile ?? null
+    if (runtimeProfile === null || runtimeProfile === profile) {
+      runtimeProfileConfig = null
+      runtimeProfileConfigProfile = null
+      runtimeProfileConfigPending = null
+      return
+    }
+
+    if (
+      runtimeProfileConfigProfile === runtimeProfile &&
+      runtimeProfileConfig !== null
+    ) {
+      return
+    }
+
+    if (runtimeProfileConfigPending === runtimeProfile) {
+      return
+    }
+
+    runtimeProfileConfigPending = runtimeProfile
+    let cancelled = false
+
+    keyboard
+      .getJoystickConfig({ profile: runtimeProfile })
+      .then((runtimeConfig) => {
+        if (cancelled) return
+        runtimeProfileConfig = runtimeConfig
+        runtimeProfileConfigProfile = runtimeProfile
+      })
+      .catch(() => {
+        if (cancelled) return
+        runtimeProfileConfig = null
+        runtimeProfileConfigProfile = null
+      })
+      .finally(() => {
+        if (cancelled) return
+        if (runtimeProfileConfigPending === runtimeProfile) {
+          runtimeProfileConfigPending = null
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  })
+
+  $effect(() => {
     if (!joystickState || !config) return
 
-    const sample = buildJoystickDiagnosticSample(joystickState, config)
+    const diagnosticConfig =
+      joystickState.profile !== profile &&
+      runtimeProfileConfigProfile === joystickState.profile &&
+      runtimeProfileConfig
+        ? runtimeProfileConfig
+        : config
+
+    if (!diagnosticConfig) return
+
+    const sample = buildJoystickDiagnosticSample(joystickState, diagnosticConfig)
 
     liveSamples = pushBoundedSample(
       untrack(() => liveSamples),
@@ -325,11 +396,65 @@
   const liveOutPoints = $derived.by(() =>
     liveSamples.map((sample) => sample.out),
   )
+  const diagnosticConfig = $derived.by(() => {
+    if (
+      joystickState &&
+      joystickState.profile !== profile &&
+      runtimeProfileConfigProfile === joystickState.profile &&
+      runtimeProfileConfig
+    ) {
+      return runtimeProfileConfig
+    }
+
+    return config
+  })
+  const diagnosticProfile = $derived.by(() => {
+    if (
+      joystickState &&
+      joystickState.profile !== profile &&
+      runtimeProfileConfigProfile === joystickState.profile &&
+      runtimeProfileConfig
+    ) {
+      return joystickState.profile
+    }
+
+    return profile
+  })
+  function predictFirmwareOutput(point: JoystickVector): JoystickVector {
+    if (!diagnosticConfig) {
+      return { x: 0, y: 0 }
+    }
+
+    return applyJoystickRadialDeadzone(
+      applyJoystickCircularCorrection(point, diagnosticConfig.radialBoundaries),
+      diagnosticConfig.deadzone,
+    )
+  }
+  const liveReferenceOutPoints = $derived.by(() =>
+    diagnosticConfig ? liveRawPoints.map((point) => predictFirmwareOutput(point)) : [],
+  )
+  const livePredictedLinuxHostPoints = $derived.by(() =>
+    liveReferenceOutPoints.map((point) => predictLinuxJoydevGamepadPoint(point)),
+  )
   const freshRawPoints = $derived.by(() =>
     freshLiveSamples.map((sample) => sample.raw),
   )
+  const freshCalibratedPoints = $derived.by(() =>
+    freshLiveSamples.flatMap((sample) =>
+      sample.calibrated ? [sample.calibrated] : [],
+    ),
+  )
+  const freshCorrectedPoints = $derived.by(() =>
+    freshLiveSamples.flatMap((sample) => (sample.corrected ? [sample.corrected] : [])),
+  )
   const freshOutPoints = $derived.by(() =>
     freshLiveSamples.map((sample) => sample.out),
+  )
+  const freshReferenceOutPoints = $derived.by(() =>
+    diagnosticConfig ? freshRawPoints.map((point) => predictFirmwareOutput(point)) : [],
+  )
+  const freshPredictedLinuxHostPoints = $derived.by(() =>
+    freshReferenceOutPoints.map((point) => predictLinuxJoydevGamepadPoint(point)),
   )
   const freshHostPoints = $derived.by(() => freshHostGamepadSamples)
   const hostGamepadPoints = $derived.by(() => hostGamepadSamples)
@@ -339,15 +464,55 @@
   const liveRawCircularity = $derived.by(() =>
     computeJoystickCircularity(liveRawPoints),
   )
+  const liveCalibratedPoints = $derived.by(() =>
+    liveSamples.flatMap((sample) => (sample.calibrated ? [sample.calibrated] : [])),
+  )
+  const liveCorrectedPoints = $derived.by(() =>
+    liveSamples.flatMap((sample) => (sample.corrected ? [sample.corrected] : [])),
+  )
+  const liveCalibratedCircularity = $derived.by(() =>
+    computeJoystickCircularity(liveCalibratedPoints),
+  )
+  const liveCorrectedCircularity = $derived.by(() =>
+    computeJoystickCircularity(liveCorrectedPoints),
+  )
   const liveOutCircularity = $derived.by(() =>
     computeJoystickCircularity(liveOutPoints),
+  )
+  const liveReferenceOutCircularity = $derived.by(() =>
+    computeJoystickCircularity(liveReferenceOutPoints),
+  )
+  const livePredictedLinuxHostCircularity = $derived.by(() =>
+    computeJoystickCircularity(livePredictedLinuxHostPoints),
   )
   const freshRawCircularity = $derived.by(() =>
     computeJoystickCircularity(freshRawPoints),
   )
+  const freshCalibratedCircularity = $derived.by(() =>
+    computeJoystickCircularity(freshCalibratedPoints),
+  )
+  const freshCorrectedCircularity = $derived.by(() =>
+    computeJoystickCircularity(freshCorrectedPoints),
+  )
   const freshOutCircularity = $derived.by(() =>
     computeJoystickCircularity(freshOutPoints),
   )
+  const freshReferenceOutCircularity = $derived.by(() =>
+    computeJoystickCircularity(freshReferenceOutPoints),
+  )
+  const freshPredictedLinuxHostCircularity = $derived.by(() =>
+    computeJoystickCircularity(freshPredictedLinuxHostPoints),
+  )
+  const currentReferenceOut = $derived.by(() => {
+    if (!joystickState || !diagnosticConfig) return null
+
+    return predictFirmwareOutput(
+      normalizeRawPoint(
+        { x: joystickState.rawX, y: joystickState.rawY },
+        diagnosticConfig,
+      ),
+    )
+  })
   const restAssessment = $derived.by(() =>
     assessJoystickRestSamples(centerSamplesX, centerSamplesY),
   )
@@ -400,22 +565,37 @@
   const sweepOutputCircularity = $derived.by(() =>
     computeJoystickCircularity(displayedSweepOutputPoints),
   )
+  const isLinuxHost = $derived.by(() => {
+    if (typeof navigator === "undefined") return false
+    return /Linux/i.test(navigator.userAgent)
+  })
+  const hostGamepadBackend = $derived.by(() => {
+    if (typeof navigator === "undefined" || !navigator.getGamepads) {
+      return "Gamepad API unavailable"
+    }
+
+    if (isLinuxHost) {
+      return "Chromium Gamepad API via Linux joydev"
+    }
+
+    return "Browser Gamepad API"
+  })
   const currentGamepadTransport = $derived.by(() => {
     if (!options) return "Unknown"
     return options.xInputEnabled ? "XInput" : "HID Gamepad"
   })
   const supportsHostTransportComparison = $derived.by(() => {
     if (typeof navigator === "undefined") return false
-    return !/Linux/i.test(navigator.userAgent)
+    return !isLinuxHost
   })
   const gamepadHostValidationMode = $derived.by(() => {
     if (!config)
       return "Switch the joystick mode to XInput Left Stick or XInput Right Stick before host-side gamepad checks."
     if (!supportsHostTransportComparison) {
       if (config.mode === 2 || config.mode === 3) {
-        return "This host only exposes the HID Gamepad path, so compare firmware OUT circularity against HID host capture."
+        return "On Linux, browser host checks read the Gamepad API through joydev. Use firmware OUT to validate the correction path, then treat the measured host capture as the real browser-side result. The Linux prediction shown below is only the default joydev baseline."
       }
-      return "Switch the joystick mode to XInput Left Stick or XInput Right Stick before HID host-side gamepad checks."
+      return "Switch the joystick mode to XInput Left Stick or XInput Right Stick before Linux browser host-side gamepad checks."
     }
     if (config.mode === 2 || config.mode === 3) {
       return "The joystick mode is already mapped to a gamepad stick, so host-side transport checks are ready."
@@ -424,7 +604,7 @@
   })
   const transportValidationAdvice = $derived.by(() => {
     if (!supportsHostTransportComparison) {
-      return "On Linux, host validation is limited to the HID Gamepad path. Use firmware OUT circularity as the primary metric, then compare it against HID host capture when the joystick mode is mapped to a stick."
+      return "On Linux, Chromium/Electron reads Gamepad API axes through joydev instead of raw evdev/HID samples. Use firmware OUT to validate the correction path, then use measured host capture as the actual Linux browser result. The predicted Linux score is only a default-joydev reference."
     }
 
     return "After the shape is stable here, compare host behavior twice for gamepad use: once with XInput enabled, and once with XInput disabled."
@@ -459,6 +639,52 @@
     }
     return "No fresh sweep captured yet."
   })
+  const hostCircularitySubtitle = $derived.by(() => {
+    if (!supportsHostTransportComparison) {
+      return "Measured Linux browser host result. Use this as the authoritative host-side score when it is available."
+    }
+
+    return "Confirms whether HID and XInput look different on the host."
+  })
+  const freshHostSubtitle = $derived.by(() => {
+    if (!supportsHostTransportComparison) {
+      return "Measured Linux browser host score over the same fixed capture window."
+    }
+
+    return "Host score over the same fixed capture window."
+  })
+  const liveLinuxMeasuredVsOutDelta = $derived.by(() =>
+    circularityScoreDelta(hostGamepadCircularity, liveReferenceOutCircularity),
+  )
+  const liveLinuxMeasuredVsPredictionDelta = $derived.by(() =>
+    circularityScoreDelta(
+      hostGamepadCircularity,
+      livePredictedLinuxHostCircularity,
+    ),
+  )
+  const freshLinuxMeasuredVsOutDelta = $derived.by(() =>
+    circularityScoreDelta(freshHostCircularity, freshReferenceOutCircularity),
+  )
+  const freshLinuxMeasuredVsPredictionDelta = $derived.by(() =>
+    circularityScoreDelta(
+      freshHostCircularity,
+      freshPredictedLinuxHostCircularity,
+    ),
+  )
+  const liveLinuxHostInterpretation = $derived.by(() =>
+    describeLinuxHostPrediction(
+      hostGamepadCircularity,
+      liveReferenceOutCircularity,
+      livePredictedLinuxHostCircularity,
+    ),
+  )
+  const freshLinuxHostInterpretation = $derived.by(() =>
+    describeLinuxHostPrediction(
+      freshHostCircularity,
+      freshReferenceOutCircularity,
+      freshPredictedLinuxHostCircularity,
+    ),
+  )
 
   $effect(() => {
     if (!joystickState) return
@@ -575,12 +801,17 @@
     calibrationPreviousMode = null
 
     try {
-      await persistJoystickConfig(updated)
+      await persistSharedCalibration(updated, updated.mode)
       // Clear mixed pre/post-calibration samples so live circularity only
       // reflects the saved config after the user performs a fresh sweep.
       liveSamples = []
       clearFreshCapture()
       hostGamepadSamples = []
+      toast.success(
+        keyboard.metadata.numProfiles > 1
+          ? "Joystick calibration was saved and shared across all profiles."
+          : "Joystick calibration was saved.",
+      )
     } catch (error) {
       toast.error("Calibration values could not be saved to the keyboard.")
       console.error(error)
@@ -597,6 +828,38 @@
 
   function roundValue(value: number, digits = 2) {
     return Number(value.toFixed(digits))
+  }
+
+  function circularityScoreDelta(
+    measured: CircularityReport,
+    reference: CircularityReport,
+  ) {
+    return roundValue(Math.abs(measured.score - reference.score))
+  }
+
+  function describeLinuxHostPrediction(
+    measured: CircularityReport,
+    referenceOut: CircularityReport,
+    defaultJoydevPrediction: CircularityReport,
+  ) {
+    if (!measured.sampleCount || !measured.sufficient) {
+      return "Measured Linux browser host capture is not available yet. The Linux prediction is only the default joydev baseline for an uncorrected setup."
+    }
+
+    const measuredVsOut = Math.abs(measured.score - referenceOut.score)
+    const measuredVsPrediction = Math.abs(
+      measured.score - defaultJoydevPrediction.score,
+    )
+
+    if (measuredVsOut <= 2 && measuredVsPrediction >= 4) {
+      return `Measured Linux browser host matches firmware OUT within ${roundValue(measuredVsOut)} points. Treat the measured host score as authoritative here; the Linux prediction is only an uncorrected baseline.`
+    }
+
+    if (measuredVsPrediction <= 2 && measuredVsOut >= 4) {
+      return `Measured Linux browser host still matches the default joydev baseline within ${roundValue(measuredVsPrediction)} points. If you expected a jscal override, re-check it; otherwise this is the expected uncorrected Linux result.`
+    }
+
+    return "Measured Linux browser host sits between firmware OUT and the default joydev baseline. Trust the measured host score first, and use the Linux prediction only as a reference for uncorrected Linux setups."
   }
 
   function serializePoint(point: { x: number; y: number }) {
@@ -772,6 +1035,84 @@
     }
   }
 
+  async function persistSharedCalibration(
+    candidate: Pick<HMK_JoystickConfig, "x" | "y" | "radialBoundaries">,
+    restoredMode: number | null,
+  ) {
+    if (!config) return
+
+    const selectedUpdated = {
+      ...config,
+      x: candidate.x,
+      y: candidate.y,
+      radialBoundaries: [...candidate.radialBoundaries],
+      ...(restoredMode !== null ? { mode: restoredMode } : {}),
+    }
+
+    if (
+      keyboard.metadata.numProfiles <= 1 ||
+      !keyboard.getJoystickConfig ||
+      !keyboard.setJoystickConfig
+    ) {
+      await persistJoystickConfig(selectedUpdated)
+      return
+    }
+
+    const previousConfig = config
+    const previousRuntimeProfileConfig = runtimeProfileConfig
+    const previousRuntimeProfileConfigProfile = runtimeProfileConfigProfile
+    const previousRuntimeProfileConfigPending = runtimeProfileConfigPending
+    const runtimeProfile = joystickState?.profile ?? profile
+
+    config = selectedUpdated
+    configReadbackVerified = null
+
+    try {
+      for (
+        let targetProfile = 0;
+        targetProfile < keyboard.metadata.numProfiles;
+        targetProfile += 1
+      ) {
+        const existing = await keyboard.getJoystickConfig({
+          profile: targetProfile,
+        })
+        const updated = {
+          ...existing,
+          x: candidate.x,
+          y: candidate.y,
+          radialBoundaries: [...candidate.radialBoundaries],
+          ...(targetProfile === profile && restoredMode !== null
+            ? { mode: restoredMode }
+            : {}),
+        }
+        await keyboard.setJoystickConfig({ profile: targetProfile, config: updated })
+      }
+
+      const persisted = await keyboard.getJoystickConfig({ profile })
+      config = persisted
+      configReadbackVerified = joystickConfigsEqual(selectedUpdated, persisted)
+      if (!configReadbackVerified) {
+        throw new Error("Joystick config read-back mismatch")
+      }
+
+      if (runtimeProfile !== profile) {
+        runtimeProfileConfigPending = runtimeProfile
+        runtimeProfileConfig = await keyboard.getJoystickConfig({
+          profile: runtimeProfile,
+        })
+        runtimeProfileConfigProfile = runtimeProfile
+        runtimeProfileConfigPending = null
+      }
+    } catch (error) {
+      config = previousConfig
+      runtimeProfileConfig = previousRuntimeProfileConfig
+      runtimeProfileConfigProfile = previousRuntimeProfileConfigProfile
+      runtimeProfileConfigPending = previousRuntimeProfileConfigPending
+      configReadbackVerified = false
+      throw error
+    }
+  }
+
   function getModeLabel(mode: number) {
     return (
       modes.find((entry) => Number(entry.value) === mode)?.label ?? "Unknown"
@@ -779,7 +1120,7 @@
   }
 
   function clampHostAxis(value: number) {
-    return Math.max(-127, Math.min(127, value * 127))
+    return Math.max(0 - 127, Math.min(127, value * 127))
   }
 
   function currentHostStickMode(mode: number | null): "left" | "right" | null {
@@ -1084,6 +1425,7 @@
         joystickModeReadyForGamepadValidation:
           config.mode === 2 || config.mode === 3,
         hostGamepad: {
+          backend: hostGamepadBackend,
           available: hostGamepadState.available,
           connected: hostGamepadState.connected,
           index: hostGamepadState.index,
@@ -1107,6 +1449,20 @@
             vector: candidate.vector ? serializePoint(candidate.vector) : null,
           })),
           circularity: serializeCircularity(hostGamepadCircularity),
+          predictedLinuxJoydevAssumption: LINUX_JOYDEV_PREDICTION_ASSUMPTION,
+          predictedLinuxJoydevRole: LINUX_JOYDEV_PREDICTION_ROLE,
+          predictedLinuxJoydevCircularity: serializeCircularity(
+            livePredictedLinuxHostCircularity,
+          ),
+          linuxMeasuredVsOutDelta: isLinuxHost
+            ? liveLinuxMeasuredVsOutDelta
+            : null,
+          linuxMeasuredVsPredictedJoydevDelta: isLinuxHost
+            ? liveLinuxMeasuredVsPredictionDelta
+            : null,
+          linuxMeasurementInterpretation: isLinuxHost
+            ? liveLinuxHostInterpretation
+            : null,
           pointsTail: hostGamepadPoints
             .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
             .map(serializePoint),
@@ -1118,17 +1474,56 @@
           label: getModeLabel(config.mode),
         },
         configReadbackVerified,
+        selectedProfile: profile,
+        runtimeProfile: joystickState?.profile ?? null,
+        diagnosticProfile,
         config,
+        diagnosticConfig,
         latestState: joystickState,
       },
       diagnostics: {
         live: {
           rawCircularity: serializeCircularity(liveRawCircularity),
+          calibratedCircularity: liveCalibratedPoints.length
+            ? serializeCircularity(liveCalibratedCircularity)
+            : null,
+          correctedCircularity: liveCorrectedPoints.length
+            ? serializeCircularity(liveCorrectedCircularity)
+            : null,
           outCircularity: serializeCircularity(liveOutCircularity),
+          referenceOutCircularity: serializeCircularity(
+            liveReferenceOutCircularity,
+          ),
+          predictedLinuxHostAssumption: LINUX_JOYDEV_PREDICTION_ASSUMPTION,
+          predictedLinuxHostRole: LINUX_JOYDEV_PREDICTION_ROLE,
+          predictedLinuxHostCircularity: serializeCircularity(
+            livePredictedLinuxHostCircularity,
+          ),
+          linuxMeasuredVsOutDelta: isLinuxHost
+            ? liveLinuxMeasuredVsOutDelta
+            : null,
+          linuxMeasuredVsPredictedDelta: isLinuxHost
+            ? liveLinuxMeasuredVsPredictionDelta
+            : null,
+          linuxHostInterpretation: isLinuxHost
+            ? liveLinuxHostInterpretation
+            : null,
           rawPointsTail: liveRawPoints
             .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
             .map(serializePoint),
+          calibratedPointsTail: liveCalibratedPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          correctedPointsTail: liveCorrectedPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
           outPointsTail: liveOutPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          referenceOutPointsTail: liveReferenceOutPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          predictedLinuxHostPointsTail: livePredictedLinuxHostPoints
             .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
             .map(serializePoint),
         },
@@ -1136,12 +1531,47 @@
           phase: freshCapturePhase,
           sampleCount: freshLiveSamples.length,
           rawCircularity: serializeCircularity(freshRawCircularity),
+          calibratedCircularity: freshCalibratedPoints.length
+            ? serializeCircularity(freshCalibratedCircularity)
+            : null,
+          correctedCircularity: freshCorrectedPoints.length
+            ? serializeCircularity(freshCorrectedCircularity)
+            : null,
           outCircularity: serializeCircularity(freshOutCircularity),
+          referenceOutCircularity: serializeCircularity(
+            freshReferenceOutCircularity,
+          ),
+          predictedLinuxHostAssumption: LINUX_JOYDEV_PREDICTION_ASSUMPTION,
+          predictedLinuxHostRole: LINUX_JOYDEV_PREDICTION_ROLE,
+          predictedLinuxHostCircularity: serializeCircularity(
+            freshPredictedLinuxHostCircularity,
+          ),
           hostCircularity: serializeCircularity(freshHostCircularity),
+          linuxMeasuredVsOutDelta: isLinuxHost
+            ? freshLinuxMeasuredVsOutDelta
+            : null,
+          linuxMeasuredVsPredictedDelta: isLinuxHost
+            ? freshLinuxMeasuredVsPredictionDelta
+            : null,
+          linuxHostInterpretation: isLinuxHost
+            ? freshLinuxHostInterpretation
+            : null,
           rawPointsTail: freshRawPoints
             .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
             .map(serializePoint),
+          calibratedPointsTail: freshCalibratedPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          correctedPointsTail: freshCorrectedPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
           outPointsTail: freshOutPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          referenceOutPointsTail: freshReferenceOutPoints
+            .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
+            .map(serializePoint),
+          predictedLinuxHostPointsTail: freshPredictedLinuxHostPoints
             .slice(-DIAGNOSTIC_EXPORT_POINT_LIMIT)
             .map(serializePoint),
           hostPointsTail: freshHostPoints
@@ -1192,7 +1622,11 @@
         `Current gamepad transport is ${currentGamepadTransport}.`,
         supportsHostTransportComparison
           ? "For host-side comparison, switch the joystick mode to XInput Left Stick or Right Stick, then test the same sweep twice: once with XInput enabled and once with XInput disabled."
-          : "This host only exposes the HID Gamepad path. Use firmware OUT circularity as the primary metric, and compare it against HID host capture when the joystick mode is mapped to a stick.",
+          : "On Linux, Chromium/Electron reads Gamepad API axes through joydev rather than raw evdev/HID values. Use firmware OUT to validate the correction path, then use measured host capture as the real Linux browser result.",
+        "Predicted Linux host circularity is a default joydev reference only. It ignores jscal overrides; when measured host capture is available, trust that measured host score instead.",
+        ...(isLinuxHost
+          ? [`Linux comparison summary: ${freshLinuxHostInterpretation}`]
+          : []),
       ],
     }
   }
@@ -1391,18 +1825,33 @@
       <h3 class="mb-4 text-sm font-semibold">Live Monitor</h3>
       <div class="grid grid-cols-2 gap-4 font-mono text-xs">
         <div>
+          STATE PROFILE: {joystickState?.profile ?? 0}<br />
           RAW X: {joystickState?.rawX ?? 0}<br />
           RAW Y: {joystickState?.rawY ?? 0}<br />
         </div>
         <div>
           OUT X: {joystickState?.outX ?? 0}<br />
           OUT Y: {joystickState?.outY ?? 0}<br />
+          CAL X: {joystickState?.calibratedX ?? 0}<br />
+          CAL Y: {joystickState?.calibratedY ?? 0}<br />
+          CORR X: {joystickState?.correctedX ?? 0}<br />
+          CORR Y: {joystickState?.correctedY ?? 0}<br />
+          REF X: {currentReferenceOut?.x ?? 0}<br />
+          REF Y: {currentReferenceOut?.y ?? 0}<br />
           BTN: {joystickState?.sw ? "PRESSED" : "RELEASED"}
         </div>
       </div>
+      {#if joystickState && joystickState.profile !== profile}
+        <p class="mt-3 text-xs text-amber-600">
+          The device is currently running profile {joystickState.profile}, but this
+          tab is showing config for profile {profile}. Diagnostics below use the
+          runtime profile config when available, but edits still apply to profile
+          {profile}.
+        </p>
+      {/if}
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
+    <div class="grid gap-4 lg:grid-cols-3">
       <JoystickDiagnosticPlot
         title="Normalized RAW Shape"
         subtitle="ADC samples normalized with the current joystick calibration."
@@ -1417,9 +1866,16 @@
         pointClass="fill-emerald-500/20"
         lastPointClass="fill-emerald-500 stroke-background stroke-2"
       />
+      <JoystickDiagnosticPlot
+        title="Reference OUT Shape"
+        subtitle="What the host-side reference implementation predicts from RAW plus the current config."
+        points={liveReferenceOutPoints}
+        pointClass="fill-cyan-500/20"
+        lastPointClass="fill-cyan-500 stroke-background stroke-2"
+      />
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-3">
+    <div class="grid gap-4 lg:grid-cols-4">
       <div class="rounded-xl border bg-card p-4">
         <div class="mb-3 flex items-center justify-between gap-3">
           <div class="grid text-sm">
@@ -1491,6 +1947,43 @@
           </div>
           <div>
             Radius Spread: {Math.round(liveOutCircularity.radiusSpread * 100)}%
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border bg-card p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="grid text-sm">
+            <span class="font-medium">Reference OUT Circularity</span>
+            <span class="text-muted-foreground">
+              Host-side prediction from RAW, circular correction, and radial deadzone.
+            </span>
+          </div>
+          <span
+            class={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              circularityTone(
+                liveReferenceOutCircularity.score,
+                liveReferenceOutCircularity.sufficient,
+              ),
+            )}
+          >
+            {liveReferenceOutCircularity.label}
+          </span>
+        </div>
+        <div class="font-mono text-3xl font-semibold">
+          {Math.round(liveReferenceOutCircularity.score)}
+        </div>
+        <div
+          class="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-muted-foreground"
+        >
+          <div>Outer Samples: {liveReferenceOutCircularity.outerSampleCount}</div>
+          <div>Quadrants: {liveReferenceOutCircularity.quadrantCoverage}/4</div>
+          <div>
+            Axis Ratio: {Math.round(liveReferenceOutCircularity.axisRatio * 100)}%
+          </div>
+          <div>
+            Radius Spread: {Math.round(liveReferenceOutCircularity.radiusSpread * 100)}%
           </div>
         </div>
       </div>
@@ -1602,7 +2095,7 @@
           <div class="grid text-sm">
             <span class="font-medium">Fresh Host</span>
             <span class="text-muted-foreground">
-              Host score over the same fixed capture window.
+              {freshHostSubtitle}
             </span>
           </div>
           <div class="mt-3 font-mono text-3xl font-semibold">
@@ -1642,6 +2135,36 @@
             >{currentGamepadTransport}</span
           >
         </span>
+        <span>
+          Host gamepad backend: <span class="font-medium text-foreground"
+            >{hostGamepadBackend}</span
+          >
+        </span>
+        {#if isLinuxHost}
+          {#if hostGamepadCircularity.sampleCount > 0}
+            <span>
+              Measured Linux browser host circularity:
+              <span class="font-medium text-foreground"
+                >{Math.round(hostGamepadCircularity.score)}</span
+              >
+            </span>
+          {:else}
+            <span>
+              Measured Linux browser host circularity:
+              <span class="font-medium text-foreground"
+                >waiting for host samples</span
+              >
+            </span>
+          {/if}
+          <span>{liveLinuxHostInterpretation}</span>
+          <span>
+            Default Linux joydev reference from firmware OUT
+            (reference only, ignores jscal overrides):
+            <span class="font-medium text-foreground"
+              >{Math.round(livePredictedLinuxHostCircularity.score)}</span
+            >
+          </span>
+        {/if}
         <span>{gamepadHostValidationMode}</span>
         <span>{hostGamepadStatus}</span>
       </div>
@@ -1658,7 +2181,7 @@
             <div class="grid text-sm">
               <span class="font-medium">Host Circularity</span>
               <span class="text-muted-foreground">
-                Confirms whether HID and XInput look different on the host.
+                {hostCircularitySubtitle}
               </span>
             </div>
             <span
@@ -1734,6 +2257,11 @@
           Click below to calibrate the joystick's resting center and maximum
           ranges. Mouse/scroll output is temporarily disabled during
           calibration.
+          {#if keyboard.metadata.numProfiles > 1}
+            The measured center, travel range, and boundary map are shared
+            across all profiles, while profile-specific behavior like mode and
+            deadzone stays as-is.
+          {/if}
         </p>
         <Button onclick={startCalibration}>Start Calibration</Button>
         <div

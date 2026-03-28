@@ -18,6 +18,8 @@ export type JoystickVector = {
 export type JoystickDiagnosticSample = {
   raw: JoystickVector
   out: JoystickVector
+  calibrated?: JoystickVector
+  corrected?: JoystickVector
 }
 
 export type JoystickDiagnosticRawSample = {
@@ -75,12 +77,25 @@ const REST_CENTER_MIN_SAMPLES = 16
 const REST_CENTER_MAX_SPREAD = 64
 const RADIAL_BOUNDARY_TUNING_FOLDS = 4
 const RADIAL_BOUNDARY_TUNING_MIN_SAMPLES = 128
-const RADIAL_BOUNDARY_TUNING_PERCENTILES = [0.84, 0.88, 0.9] as const
-const RADIAL_BOUNDARY_TUNING_SHRINK_FACTORS = [0.9, 0.95, 1] as const
+const RADIAL_BOUNDARY_TUNING_PERCENTILES = [0.8, 0.84, 0.88, 0.9] as const
+const RADIAL_BOUNDARY_TUNING_SHRINK_FACTORS = [0.84, 0.88, 0.92, 0.96, 1] as const
+const AXIS_RANGE_TUNING_FACTORS = [0.86, 0.9, 0.94, 0.98, 1, 1.02, 1.04, 1.06] as const
+const RADIAL_BOUNDARY_TUNING_HOLDOUT_WEIGHT = 0.9
+const RADIAL_BOUNDARY_TUNING_FULL_WEIGHT = 0.1
+const LINUX_JOYDEV_AXIS_MIN = -128
+const LINUX_JOYDEV_AXIS_MAX = 127
+const LINUX_JOYDEV_AXIS_OUTPUT_MAX = 32767
 
 type RadialBoundaryBuildOptions = {
   calibrationPercentile?: number
   shrinkFactor?: number
+}
+
+type CalibrationOptimizationOptions = {
+  calibrationPercentile: number
+  shrinkFactor: number
+  xRangeFactor: number
+  yRangeFactor: number
 }
 
 function normalizeRawAxis(
@@ -391,6 +406,47 @@ export function applyJoystickRadialDeadzone(
   }
 }
 
+function applyLinuxJoydevAxisCorrection(
+  value: number,
+  minimum = LINUX_JOYDEV_AXIS_MIN,
+  maximum = LINUX_JOYDEV_AXIS_MAX,
+) {
+  const quantized = clamp(Math.round(value), [minimum, maximum])
+  const flat = Math.trunc((maximum - minimum) / 16)
+  const center = Math.trunc((maximum + minimum) / 2)
+  const lowerDeadzoneEdge = center - flat
+  const upperDeadzoneEdge = center + flat
+  const span = Math.trunc((maximum - minimum) / 2) - 2 * flat
+
+  if (span <= 0) {
+    return 0
+  }
+
+  const coefficient = Math.trunc((1 << 29) / span)
+  let corrected = 0
+
+  if (quantized > lowerDeadzoneEdge) {
+    if (quantized >= upperDeadzoneEdge) {
+      corrected = (coefficient * (quantized - upperDeadzoneEdge)) >> 14
+    }
+  } else {
+    corrected = (coefficient * (quantized - lowerDeadzoneEdge)) >> 14
+  }
+
+  return clamp(corrected, [-LINUX_JOYDEV_AXIS_OUTPUT_MAX, LINUX_JOYDEV_AXIS_OUTPUT_MAX])
+}
+
+export function predictLinuxJoydevGamepadPoint(point: JoystickVector): JoystickVector {
+  return {
+    x:
+      (applyLinuxJoydevAxisCorrection(point.x) * CIRCULAR_TARGET_MAGNITUDE) /
+      LINUX_JOYDEV_AXIS_OUTPUT_MAX,
+    y:
+      (applyLinuxJoydevAxisCorrection(point.y) * CIRCULAR_TARGET_MAGNITUDE) /
+      LINUX_JOYDEV_AXIS_OUTPUT_MAX,
+  }
+}
+
 export function buildRadialBoundaries(
   points: JoystickVector[],
   options: RadialBoundaryBuildOptions = {},
@@ -565,10 +621,20 @@ export function buildJoystickDiagnosticSample(
   state: HMK_JoystickState,
   config: HMK_JoystickConfig,
 ): JoystickDiagnosticSample {
-  return {
+  const sample: JoystickDiagnosticSample = {
     raw: normalizeRawPoint({ x: state.rawX, y: state.rawY }, config),
     out: { x: state.outX, y: state.outY },
   }
+
+  if (state.calibratedX !== undefined && state.calibratedY !== undefined) {
+    sample.calibrated = { x: state.calibratedX, y: state.calibratedY }
+  }
+
+  if (state.correctedX !== undefined && state.correctedY !== undefined) {
+    sample.corrected = { x: state.correctedX, y: state.correctedY }
+  }
+
+  return sample
 }
 
 export function pushBoundedSample<T>(samples: T[], sample: T, limit: number) {
@@ -623,6 +689,41 @@ export function buildCalibrationCandidate(
   }
 }
 
+function scaleAxisCalibrationRange(
+  calibration: HMK_JoystickAxisCalibration,
+  rangeFactor: number,
+): HMK_JoystickAxisCalibration {
+  const negativeRange = Math.max(100, calibration.center - calibration.min)
+  const positiveRange = Math.max(100, calibration.max - calibration.center)
+  const scaledNegativeRange = clamp(
+    Math.round(negativeRange * rangeFactor),
+    [100, calibration.center - ADC_MIN_FALLBACK],
+  )
+  const scaledPositiveRange = clamp(
+    Math.round(positiveRange * rangeFactor),
+    [100, ADC_MAX_FALLBACK - calibration.center],
+  )
+
+  return {
+    min: calibration.center - scaledNegativeRange,
+    center: calibration.center,
+    max: calibration.center + scaledPositiveRange,
+  }
+}
+
+function scaleCalibrationCandidateRanges(
+  candidate: JoystickCalibrationCandidate,
+  xRangeFactor: number,
+  yRangeFactor: number,
+): JoystickCalibrationCandidate {
+  return {
+    ...candidate,
+    x: scaleAxisCalibrationRange(candidate.x, xRangeFactor),
+    y: scaleAxisCalibrationRange(candidate.y, yRangeFactor),
+    radialBoundaries: [...candidate.radialBoundaries],
+  }
+}
+
 function correctedCircularityScore(
   points: JoystickVector[],
   radialBoundaries: number[],
@@ -649,13 +750,83 @@ function interleavedFoldSplit(points: JoystickVector[], foldIndex: number) {
   return { training, holdout }
 }
 
-function selectGeneralizedRadialBoundaryOptions(points: JoystickVector[]) {
-  const defaultOptions = {
-    calibrationPercentile: CALIBRATION_ENVELOPE_PERCENTILE,
-    shrinkFactor: 1,
+function blockedFoldSplit(points: JoystickVector[], foldIndex: number) {
+  if (points.length === 0) {
+    return {
+      training: [] as JoystickVector[],
+      holdout: [] as JoystickVector[],
+    }
   }
 
-  if (points.length < RADIAL_BOUNDARY_TUNING_MIN_SAMPLES) {
+  const foldSize = Math.ceil(points.length / RADIAL_BOUNDARY_TUNING_FOLDS)
+  const startIndex = foldIndex * foldSize
+  const endIndex = Math.min(points.length, startIndex + foldSize)
+
+  return {
+    training: [...points.slice(0, startIndex), ...points.slice(endIndex)],
+    holdout: points.slice(startIndex, endIndex),
+  }
+}
+
+function averageHoldoutCircularityScore(
+  sweepSamples: JoystickDiagnosticRawSample[],
+  tunedCandidate: JoystickCalibrationCandidate,
+  candidateOptions: RadialBoundaryBuildOptions,
+) {
+  const splitters = [interleavedFoldSplit, blockedFoldSplit]
+  let holdoutScoreSum = 0
+  let holdoutScoreCount = 0
+
+  for (const split of splitters) {
+    for (
+      let foldIndex = 0;
+      foldIndex < RADIAL_BOUNDARY_TUNING_FOLDS;
+      foldIndex += 1
+    ) {
+      const { training, holdout } = split(sweepSamples, foldIndex)
+      if (training.length === 0 || holdout.length === 0) {
+        continue
+      }
+
+      const trainingPoints = training.map((sample) =>
+        normalizeRawPoint(sample, tunedCandidate),
+      )
+      const holdoutPoints = holdout.map((sample) =>
+        normalizeRawPoint(sample, tunedCandidate),
+      )
+      const radialBoundaries = buildRadialBoundaries(
+        trainingPoints,
+        candidateOptions,
+      )
+      const holdoutScore = correctedCircularityScore(
+        holdoutPoints,
+        radialBoundaries,
+      )
+
+      holdoutScoreSum += holdoutScore
+      holdoutScoreCount += 1
+    }
+  }
+
+  if (holdoutScoreCount === 0) {
+    return null
+  }
+
+  return holdoutScoreSum / holdoutScoreCount
+}
+
+function selectGeneralizedCalibrationOptions(
+  candidate: JoystickCalibrationCandidate,
+  sweepSamples: JoystickDiagnosticRawSample[],
+): CalibrationOptimizationOptions {
+  const defaultOptions: CalibrationOptimizationOptions = {
+    calibrationPercentile: CALIBRATION_ENVELOPE_PERCENTILE,
+    shrinkFactor: 1,
+    xRangeFactor: 1,
+    yRangeFactor: 1,
+  }
+
+  if (sweepSamples.length < RADIAL_BOUNDARY_TUNING_MIN_SAMPLES) {
     return defaultOptions
   }
 
@@ -664,37 +835,51 @@ function selectGeneralizedRadialBoundaryOptions(points: JoystickVector[]) {
 
   for (const calibrationPercentile of RADIAL_BOUNDARY_TUNING_PERCENTILES) {
     for (const shrinkFactor of RADIAL_BOUNDARY_TUNING_SHRINK_FACTORS) {
-      const candidateOptions = { calibrationPercentile, shrinkFactor }
-      let holdoutScoreSum = 0
-      let holdoutScoreCount = 0
+      for (const xRangeFactor of AXIS_RANGE_TUNING_FACTORS) {
+        for (const yRangeFactor of AXIS_RANGE_TUNING_FACTORS) {
+          const tunedCandidate = scaleCalibrationCandidateRanges(
+            candidate,
+            xRangeFactor,
+            yRangeFactor,
+          )
+          const candidateOptions = { calibrationPercentile, shrinkFactor }
+          const holdoutScore = averageHoldoutCircularityScore(
+            sweepSamples,
+            tunedCandidate,
+            candidateOptions,
+          )
+          if (holdoutScore === null) {
+            continue
+          }
 
-      for (let foldIndex = 0; foldIndex < RADIAL_BOUNDARY_TUNING_FOLDS; foldIndex += 1) {
-        const { training, holdout } = interleavedFoldSplit(points, foldIndex)
-        if (training.length === 0 || holdout.length === 0) {
-          continue
+          const normalizedPoints = sweepSamples.map((sample) =>
+            normalizeRawPoint(sample, tunedCandidate),
+          )
+          const fullBoundaries = buildRadialBoundaries(
+            normalizedPoints,
+            candidateOptions,
+          )
+          const fullScore = correctedCircularityScore(
+            normalizedPoints,
+            fullBoundaries,
+          )
+          const objective =
+            holdoutScore * RADIAL_BOUNDARY_TUNING_HOLDOUT_WEIGHT +
+            fullScore * RADIAL_BOUNDARY_TUNING_FULL_WEIGHT
+
+          if (objective <= bestScore) {
+            continue
+          }
+
+          bestScore = objective
+          bestOptions = {
+            calibrationPercentile,
+            shrinkFactor,
+            xRangeFactor,
+            yRangeFactor,
+          }
         }
-
-        const radialBoundaries = buildRadialBoundaries(training, candidateOptions)
-        const holdoutScore = correctedCircularityScore(holdout, radialBoundaries)
-        holdoutScoreSum += holdoutScore
-        holdoutScoreCount += 1
       }
-
-      if (holdoutScoreCount === 0) {
-        continue
-      }
-
-      const holdoutScore = holdoutScoreSum / holdoutScoreCount
-      const fullBoundaries = buildRadialBoundaries(points, candidateOptions)
-      const fullScore = correctedCircularityScore(points, fullBoundaries)
-      const objective = holdoutScore * 0.8 + fullScore * 0.2
-
-      if (objective <= bestScore) {
-        continue
-      }
-
-      bestScore = objective
-      bestOptions = candidateOptions
     }
   }
 
@@ -709,13 +894,21 @@ export function optimizeCalibrationCandidate(
     return candidate
   }
 
-  const normalizedPoints = sweepSamples.map((sample) =>
-    normalizeRawPoint(sample, candidate),
+  const optimizedOptions = selectGeneralizedCalibrationOptions(
+    candidate,
+    sweepSamples,
   )
-  const optimizedOptions = selectGeneralizedRadialBoundaryOptions(normalizedPoints)
+  const tunedCandidate = scaleCalibrationCandidateRanges(
+    candidate,
+    optimizedOptions.xRangeFactor,
+    optimizedOptions.yRangeFactor,
+  )
+  const normalizedPoints = sweepSamples.map((sample) =>
+    normalizeRawPoint(sample, tunedCandidate),
+  )
 
   return {
-    ...candidate,
+    ...tunedCandidate,
     radialBoundaries: buildRadialBoundaries(normalizedPoints, optimizedOptions),
   }
 }

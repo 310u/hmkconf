@@ -10,6 +10,7 @@ export const HMK_JOYSTICK_RADIAL_BOUNDARY_DEFAULT = 127
 export const HMK_JOYSTICK_RADIAL_BOUNDARY_FIRMWARE_VERSION = 0x0109
 export const HMK_JOYSTICK_MOUSE_PRESET_COUNT = 4
 export const HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION = 0x010a
+export const HMK_JOYSTICK_STATE_STAGE_FIRMWARE_VERSION = 0x010b
 
 export function makeDefaultJoystickRadialBoundaries() {
   return Array.from(
@@ -103,16 +104,22 @@ export const joystickConfigSchema = joystickConfigBaseSchema.transform((config) 
 export type HMK_JoystickConfig = z.output<typeof joystickConfigSchema>
 
 export const joystickStateSchema = z.object({
+  profile: uint8Schema,
   rawX: uint16Schema,
   rawY: uint16Schema,
   outX: z.number().int().min(-128).max(127),
   outY: z.number().int().min(-128).max(127),
   sw: z.boolean(),
+  calibratedX: z.number().int().min(-128).max(127).optional(),
+  calibratedY: z.number().int().min(-128).max(127).optional(),
+  correctedX: z.number().int().min(-128).max(127).optional(),
+  correctedY: z.number().int().min(-128).max(127).optional(),
 })
 export type HMK_JoystickState = z.infer<typeof joystickStateSchema>
 
 export async function getJoystickState(
   commander: Commander,
+  firmwareVersion = HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION,
 ): Promise<HMK_JoystickState> {
   const reader = new DataViewReader(
     await commander.sendCommand({
@@ -122,7 +129,7 @@ export async function getJoystickState(
   )
 
   parseCommandOutBuffer(reader, HMK_Command.GET_JOYSTICK_STATE)
-  reader.uint8()
+  const profile = reader.uint8()
   const rawX = reader.uint16()
   const rawY = reader.uint16()
 
@@ -130,8 +137,35 @@ export async function getJoystickState(
   const outY = reader.view.getInt8(reader.offset++)
 
   const sw = reader.uint8() !== 0
+  const calibratedX =
+    firmwareVersion >= HMK_JOYSTICK_STATE_STAGE_FIRMWARE_VERSION
+      ? reader.view.getInt8(reader.offset++)
+      : undefined
+  const calibratedY =
+    firmwareVersion >= HMK_JOYSTICK_STATE_STAGE_FIRMWARE_VERSION
+      ? reader.view.getInt8(reader.offset++)
+      : undefined
+  const correctedX =
+    firmwareVersion >= HMK_JOYSTICK_STATE_STAGE_FIRMWARE_VERSION
+      ? reader.view.getInt8(reader.offset++)
+      : undefined
+  const correctedY =
+    firmwareVersion >= HMK_JOYSTICK_STATE_STAGE_FIRMWARE_VERSION
+      ? reader.view.getInt8(reader.offset++)
+      : undefined
 
-  return { rawX, rawY, outX, outY, sw }
+  return {
+    profile,
+    rawX,
+    rawY,
+    outX,
+    outY,
+    sw,
+    calibratedX,
+    calibratedY,
+    correctedX,
+    correctedY,
+  }
 }
 
 export type GetJoystickConfigParams = {

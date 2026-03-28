@@ -252,7 +252,18 @@ export class DemoKeyboard implements Keyboard {
     this.#state.profiles[profile].rgbConfig = data
   }
   async getJoystickState(): Promise<HMK_JoystickState> {
-    return { rawX: 2048, rawY: 2048, outX: 0, outY: 0, sw: false }
+    return {
+      profile: 0,
+      rawX: 2048,
+      rawY: 2048,
+      outX: 0,
+      outY: 0,
+      sw: false,
+      calibratedX: 0,
+      calibratedY: 0,
+      correctedX: 0,
+      correctedY: 0,
+    }
   }
   async getJoystickConfig(
     params: GetJoystickConfigParams,
