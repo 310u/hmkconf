@@ -1,6 +1,7 @@
 export const RGB_EFFECT_ANALOG = 51
 export const RGB_EFFECT_PER_KEY = 52
 export const RGB_EFFECT_TRIGGER_STATE = 53
+export const RGB_EFFECT_BINARY_CLOCK = 54
 
 export const triggerStateEditors = [
   {
@@ -86,4 +87,5 @@ export const rgbEffectOptions = [
   { value: "51", label: "Analog Keypress" },
   { value: "52", label: "Per-Key / Static" },
   { value: "53", label: "Trigger State" },
+  { value: "54", label: "Binary Clock" },
 ] as const

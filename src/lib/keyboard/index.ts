@@ -60,6 +60,11 @@ export type SetGamepadOptionsParams = SetProfileParams<HMK_GamepadOptions>
 
 export type GetMacrosParams = GetProfileParams
 export type SetMacrosParams = SetProfileArrayParams<HMK_Macro>
+export type SetHostTimeParams = {
+  hours: number
+  minutes: number
+  seconds: number
+}
 
 export type KeyboardState = {
   id: string
@@ -104,6 +109,7 @@ export type KeyboardAction = {
   setMacros(params: SetMacrosParams): Promise<void>
   getRgbConfig?(params: { profile: number }): Promise<HMK_RgbConfig>
   setRgbConfig?(params: { profile: number; data: HMK_RgbConfig }): Promise<void>
+  setHostTime?(params: SetHostTimeParams): Promise<void>
 
   getJoystickState?(): Promise<HMK_JoystickState>
   getJoystickConfig?(

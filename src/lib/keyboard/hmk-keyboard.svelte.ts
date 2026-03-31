@@ -66,6 +66,7 @@ import {
   setRgbConfig,
   type HMK_RgbConfig,
 } from "$lib/libhmk/commands/rgb"
+import { setHostTime } from "$lib/libhmk/commands/time"
 import { getSerial } from "$lib/libhmk/commands/serial"
 import { getTickRate, setTickRate } from "$lib/libhmk/commands/tick-rate"
 import { displayVersion, isWebHIDSSupported } from "$lib/utils"
@@ -85,6 +86,7 @@ import type {
   SetCalibrationParams,
   SetGamepadButtonsParams,
   SetGamepadOptionsParams,
+  SetHostTimeParams,
   SetKeymapParams,
   SetMacrosParams,
   SetOptionsParams,
@@ -229,6 +231,9 @@ class HMKKeyboard implements Keyboard {
       numKeys: this.metadata.numKeys,
       numLayers: this.metadata.numLayers,
     })
+  }
+  async setHostTime(params: SetHostTimeParams) {
+    return setHostTime(this.commander, params)
   }
   async getJoystickState() {
     return getJoystickState(this.commander, this.version)

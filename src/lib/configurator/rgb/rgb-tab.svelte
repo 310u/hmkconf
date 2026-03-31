@@ -10,6 +10,7 @@
   import RgbBasicSettingsPanel from "./rgb-basic-settings-panel.svelte"
   import {
     RGB_EFFECT_ANALOG,
+    RGB_EFFECT_BINARY_CLOCK,
     RGB_EFFECT_PER_KEY,
     RGB_EFFECT_TRIGGER_STATE,
     rgbEffectOptions,
@@ -65,6 +66,30 @@
     const updated = { ...rgbConfig, ...newConfig }
     rgbConfig = updated
     await keyboard.setRgbConfig?.({ profile, data: updated })
+    if (updated.currentEffect === RGB_EFFECT_BINARY_CLOCK) {
+      await syncHostClock()
+    }
+  }
+
+  async function syncHostClock() {
+    if (
+      tab !== "rgb" ||
+      !rgbConfig ||
+      rgbConfig.currentEffect !== RGB_EFFECT_BINARY_CLOCK
+    ) {
+      return
+    }
+
+    const now = new Date()
+    try {
+      await keyboard.setHostTime?.({
+        hours: now.getHours(),
+        minutes: now.getMinutes(),
+        seconds: now.getSeconds(),
+      })
+    } catch (error) {
+      console.warn("Failed to sync host clock", error)
+    }
   }
 
   function updateBrushColor(channel: "r" | "g" | "b", value: number) {
@@ -392,6 +417,22 @@
     }
   })
 
+  $effect(() => {
+    if (
+      tab !== "rgb" ||
+      rgbConfig?.currentEffect !== RGB_EFFECT_BINARY_CLOCK
+    ) {
+      return
+    }
+
+    void syncHostClock()
+    const interval = setInterval(() => {
+      void syncHostClock()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  })
+
   function getLedColor(keyIndex: number) {
     return getRgbPreviewLedColor({
       rgbConfig,
@@ -463,6 +504,7 @@
       <RgbSecondaryColorPanel
         {rgbConfig}
         rgbEffectAnalog={RGB_EFFECT_ANALOG}
+        rgbEffectBinaryClock={RGB_EFFECT_BINARY_CLOCK}
         onUpdateConfig={updateConfig}
       />
 

@@ -1,6 +1,7 @@
 import type { HMK_RgbColor, HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
 import {
   RGB_EFFECT_ANALOG,
+  RGB_EFFECT_BINARY_CLOCK,
   RGB_EFFECT_PER_KEY,
   RGB_EFFECT_TRIGGER_STATE,
   type TriggerPreviewState,
@@ -22,6 +23,13 @@ type RgbPreviewMetadata = {
   ledMap?: number[]
   ledCoords?: RgbLedCoordinate[]
   modLedIndices?: number[]
+}
+
+type BinaryClockLayout = {
+  valid: boolean
+  digitLeds: number[][]
+  separatorLeds: number[]
+  secondLeds: number[]
 }
 
 export function getRgbLedCount(metadata: RgbPreviewMetadata) {
@@ -200,6 +208,63 @@ export function randomDynamicColor(params: {
   }
 
   return hsvToRgb(baseHue, 255, stValue)
+}
+
+function buildBinaryClockLayout(metadata: RgbPreviewMetadata): BinaryClockLayout {
+  const ledCount = getRgbLedCount(metadata)
+  const uniqueY = Array.from(
+    new Set(
+      Array.from({ length: ledCount }, (_, ledIndex) =>
+        getRgbLedCoordsByIndex(metadata, ledIndex).y,
+      ),
+    ),
+  ).sort((left, right) => left - right)
+
+  if (uniqueY.length < 3) {
+    return {
+      valid: false,
+      digitLeds: [],
+      separatorLeds: [],
+      secondLeds: [],
+    }
+  }
+
+  const rows = uniqueY.slice(0, 3).map((y) =>
+    Array.from({ length: ledCount }, (_, ledIndex) => ledIndex)
+      .filter((ledIndex) => getRgbLedCoordsByIndex(metadata, ledIndex).y === y)
+      .sort(
+        (left, right) =>
+          getRgbLedCoordsByIndex(metadata, left).x -
+          getRgbLedCoordsByIndex(metadata, right).x,
+      ),
+  )
+
+  if (rows.some((row) => row.length < 10)) {
+    return {
+      valid: false,
+      digitLeds: [],
+      separatorLeds: [],
+      secondLeds: [],
+    }
+  }
+
+  const [topRow, middleRow, bottomRow] = rows
+  return {
+    valid: true,
+    digitLeds: [
+      topRow.slice(0, 4),
+      middleRow.slice(0, 4),
+      topRow.slice(-4),
+      middleRow.slice(-4),
+    ],
+    separatorLeds: [
+      topRow[4],
+      topRow[topRow.length - 5],
+      middleRow[4],
+      middleRow[middleRow.length - 5],
+    ],
+    secondLeds: [...bottomRow.slice(0, 5), ...bottomRow.slice(-5)],
+  }
 }
 
 function previewReactiveIntensity(params: {
@@ -690,6 +755,67 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
         effectiveBrightness,
       )
       return rgbCss(color.r, color.g, color.b)
+    }
+    case RGB_EFFECT_BINARY_CLOCK: {
+      const layout = buildBinaryClockLayout(metadata)
+      if (!layout.valid) {
+        const pulse = ((Math.floor(time / 10) & 1) === 0 ? 1 : 0) * effectiveBrightness
+        const color = scaleRgbColor(rgbConfig.solidColor, pulse)
+        return pulse > 0 ? rgbCss(color.r, color.g, color.b) : "transparent"
+      }
+
+      const now = new Date()
+      const hours = now.getHours()
+      const minutes = now.getMinutes()
+      const seconds = now.getSeconds()
+      const digits = [
+        Math.floor(hours / 10),
+        hours % 10,
+        Math.floor(minutes / 10),
+        minutes % 10,
+      ]
+      const background = scaleRgbColor(
+        rgbConfig.secondaryColor,
+        Math.max(8, Math.floor(effectiveBrightness / 10)),
+      )
+      const accent = scaleRgbColor(rgbConfig.secondaryColor, effectiveBrightness)
+      const head = scaleRgbColor(
+        rgbConfig.solidColor,
+        Math.floor((((seconds % 6) + 1) * effectiveBrightness) / 6),
+      )
+
+      for (let digitIndex = 0; digitIndex < layout.digitLeds.length; digitIndex++) {
+        const bitIndex = layout.digitLeds[digitIndex].indexOf(ledIndex)
+        if (bitIndex !== -1) {
+          const isOn = (digits[digitIndex] & (1 << (3 - bitIndex))) !== 0
+          return isOn
+            ? rgbCss(
+                (baseR * effectiveBrightness) / 255,
+                (baseG * effectiveBrightness) / 255,
+                (baseB * effectiveBrightness) / 255,
+              )
+            : "transparent"
+        }
+      }
+
+      if (layout.separatorLeds.includes(ledIndex)) {
+        const color = seconds % 2 === 0 ? accent : background
+        return rgbCss(color.r, color.g, color.b)
+      }
+
+      const secondIndex = layout.secondLeds.indexOf(ledIndex)
+      if (secondIndex !== -1) {
+        const step = Math.floor(seconds / 6)
+        const color =
+          secondIndex < step
+            ? accent
+            : secondIndex === step
+              ? head
+              : background
+        return rgbCss(color.r, color.g, color.b)
+      }
+
+      return "transparent"
     }
     case RGB_EFFECT_PER_KEY: {
       const color = rgbConfig.perKeyColors[ledIndex] || { r: 0, g: 0, b: 0 }

@@ -50,6 +50,7 @@ import type {
   SetAdvancedKeysParams,
   SetGamepadButtonsParams,
   SetGamepadOptionsParams,
+  SetHostTimeParams,
   SetKeymapParams,
   SetMacrosParams,
   SetOptionsParams,
@@ -251,6 +252,7 @@ export class DemoKeyboard implements Keyboard {
   }) {
     this.#state.profiles[profile].rgbConfig = data
   }
+  async setHostTime(_params: SetHostTimeParams) {}
   async getJoystickState(): Promise<HMK_JoystickState> {
     return {
       profile: 0,

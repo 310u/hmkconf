@@ -5,15 +5,19 @@
   let {
     rgbConfig,
     rgbEffectAnalog,
+    rgbEffectBinaryClock,
     onUpdateConfig,
   }: {
     rgbConfig: HMK_RgbConfig
     rgbEffectAnalog: number
+    rgbEffectBinaryClock: number
     onUpdateConfig: (newConfig: Partial<HMK_RgbConfig>) => void | Promise<void>
   } = $props()
 </script>
 
-{#if [2, 16, 20, 48, 49, rgbEffectAnalog].includes(rgbConfig.currentEffect)}
+{#if [2, 16, 20, 48, 49, rgbEffectAnalog, rgbEffectBinaryClock].includes(
+  rgbConfig.currentEffect,
+)}
   <div class="flex flex-col gap-2">
     <div class="grid text-sm text-wrap">
       <span class="font-semibold"
@@ -21,6 +25,8 @@
           ? "Alpha Color"
           : rgbConfig.currentEffect === rgbEffectAnalog
             ? "Base Color"
+            : rgbConfig.currentEffect === rgbEffectBinaryClock
+              ? "Seconds / Grid Color"
             : "Secondary Color"}</span
       >
     </div>
