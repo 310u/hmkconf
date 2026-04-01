@@ -13,12 +13,17 @@ export const rgbColorSchema = z.object({
 
 export type HMK_RgbColor = z.infer<typeof rgbColorSchema>
 
+export const HMK_RGB_BACKGROUND_COLOR_FIRMWARE_VERSION = 0x010d
+const RGB_CONFIG_BASE_HEADER_SIZE_LEGACY = 13
+const RGB_CONFIG_BASE_HEADER_SIZE_WITH_BACKGROUND = 16
+
 // The firmware structure layout (matches rgb_config_t in rgb.h)
 // uint8_t enabled;                        (1 byte)
 // uint8_t global_brightness;              (1 byte)
 // uint8_t current_effect;                 (1 byte)
 // rgb_color_t solid_color;                (3 bytes)
 // rgb_color_t secondary_color;            (3 bytes)
+// rgb_color_t background_color;           (3 bytes)
 // uint8_t effect_speed;                   (1 byte)
 // uint8_t sleep_timeout;                  (1 byte)
 // uint8_t layer_indicator_mode;           (1 byte)
@@ -27,14 +32,15 @@ export type HMK_RgbColor = z.infer<typeof rgbColorSchema>
 // rgb_color_t per_key_colors[NUM_KEYS];   (NUM_KEYS * 3 bytes)
 // rgb_color_t trigger_state_colors[4];    (12 bytes)
 //
-// Header size: 13 bytes (before layer_colors)
+// Header size: 16 bytes (before layer_colors)
 
-export const rgbConfigSchema = z.object({
+const rgbConfigBaseSchema = z.object({
   enabled: z.number(),
   globalBrightness: z.number(),
   currentEffect: z.number(),
   solidColor: rgbColorSchema,
   secondaryColor: rgbColorSchema,
+  backgroundColor: rgbColorSchema.optional(),
   effectSpeed: z.number(),
   sleepTimeout: z.number(),
   layerIndicatorMode: z.number(),
@@ -44,15 +50,36 @@ export const rgbConfigSchema = z.object({
   triggerStateColors: z.array(rgbColorSchema).length(4),
 })
 
+export const rgbConfigSchema = rgbConfigBaseSchema.transform((config) => ({
+  ...config,
+  backgroundColor: config.backgroundColor ?? config.secondaryColor,
+}))
+
 export type HMK_RgbConfig = z.infer<typeof rgbConfigSchema>
 
 export const GET_SET_RGB_CONFIG_MAX_ENTRIES = 59
-const RGB_CONFIG_BASE_HEADER_SIZE = 13 // enabled(1) + brightness(1) + effect(1) + solidColor(3) + secondaryColor(3) + speed(1) + sleepTimeout(1) + layerIndicatorMode(1) + layerIndicatorKey(1)
 const RGB_TRIGGER_STATE_COLOR_COUNT = 4
 
-function rgbConfigSize(numKeys: number, numLayers: number) {
+function supportsBackgroundColor(firmwareVersion?: number) {
   return (
-    RGB_CONFIG_BASE_HEADER_SIZE +
+    (firmwareVersion ?? HMK_RGB_BACKGROUND_COLOR_FIRMWARE_VERSION) >=
+    HMK_RGB_BACKGROUND_COLOR_FIRMWARE_VERSION
+  )
+}
+
+function rgbConfigHeaderSize(firmwareVersion?: number) {
+  return supportsBackgroundColor(firmwareVersion)
+    ? RGB_CONFIG_BASE_HEADER_SIZE_WITH_BACKGROUND
+    : RGB_CONFIG_BASE_HEADER_SIZE_LEGACY
+}
+
+function rgbConfigSize(
+  numKeys: number,
+  numLayers: number,
+  firmwareVersion?: number,
+) {
+  return (
+    rgbConfigHeaderSize(firmwareVersion) +
     numLayers * 3 +
     numKeys * 3 +
     RGB_TRIGGER_STATE_COLOR_COUNT * 3
@@ -63,13 +90,19 @@ export type GetRgbConfigParams = {
   profile: number
   numKeys: number
   numLayers: number
+  firmwareVersion?: number
 }
 
 export async function getRgbConfig(
   commander: Commander,
   params: GetRgbConfigParams,
 ): Promise<HMK_RgbConfig> {
-  const configSize = rgbConfigSize(params.numKeys, params.numLayers)
+  const hasBackgroundColor = supportsBackgroundColor(params.firmwareVersion)
+  const configSize = rgbConfigSize(
+    params.numKeys,
+    params.numLayers,
+    params.firmwareVersion,
+  )
   const data: number[] = []
 
   while (data.length < configSize) {
@@ -103,6 +136,9 @@ export async function getRgbConfig(
   const currentEffect = data[ptr++]
   const solidColor = { r: data[ptr++], g: data[ptr++], b: data[ptr++] }
   const secondaryColor = { r: data[ptr++], g: data[ptr++], b: data[ptr++] }
+  const backgroundColor = hasBackgroundColor
+    ? { r: data[ptr++], g: data[ptr++], b: data[ptr++] }
+    : { ...secondaryColor }
   const effectSpeed = data[ptr++]
   const sleepTimeout = data[ptr++]
   const layerIndicatorMode = data[ptr++]
@@ -141,6 +177,7 @@ export async function getRgbConfig(
     currentEffect,
     solidColor,
     secondaryColor,
+    backgroundColor,
     effectSpeed,
     sleepTimeout,
     layerIndicatorMode,
@@ -156,12 +193,16 @@ export type SetRgbConfigParams = {
   numKeys: number
   numLayers: number
   data: HMK_RgbConfig
+  firmwareVersion?: number
 }
 
 export async function setRgbConfig(
   commander: Commander,
   params: SetRgbConfigParams,
 ) {
+  const hasBackgroundColor = supportsBackgroundColor(params.firmwareVersion)
+  const backgroundColor = params.data.backgroundColor ?? params.data.secondaryColor
+
   // Serialize to raw bytes
   const rawBytes: number[] = []
   rawBytes.push(params.data.enabled)
@@ -173,6 +214,11 @@ export async function setRgbConfig(
   rawBytes.push(params.data.secondaryColor.r)
   rawBytes.push(params.data.secondaryColor.g)
   rawBytes.push(params.data.secondaryColor.b)
+  if (hasBackgroundColor) {
+    rawBytes.push(backgroundColor.r)
+    rawBytes.push(backgroundColor.g)
+    rawBytes.push(backgroundColor.b)
+  }
   rawBytes.push(params.data.effectSpeed)
   rawBytes.push(params.data.sleepTimeout)
   rawBytes.push(params.data.layerIndicatorMode)

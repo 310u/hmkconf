@@ -3,7 +3,11 @@
   import { KeyButton } from "$lib/components/key-button"
   import { KeyboardEditorKeyboard } from "$lib/components/keyboard-editor"
   import { keyboardContext, type Keyboard } from "$lib/keyboard"
-  import type { HMK_RgbColor, HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
+  import {
+    HMK_RGB_BACKGROUND_COLOR_FIRMWARE_VERSION,
+    type HMK_RgbColor,
+    type HMK_RgbConfig,
+  } from "$lib/libhmk/commands/rgb"
   import { cn, type WithoutChildren } from "$lib/utils"
   import type { HTMLAttributes } from "svelte/elements"
   import { globalStateContext } from "../context.svelte"
@@ -505,6 +509,9 @@
         {rgbConfig}
         rgbEffectAnalog={RGB_EFFECT_ANALOG}
         rgbEffectBinaryClock={RGB_EFFECT_BINARY_CLOCK}
+        supportsBackgroundColor={
+          keyboard.version >= HMK_RGB_BACKGROUND_COLOR_FIRMWARE_VERSION
+        }
         onUpdateConfig={updateConfig}
       />
 

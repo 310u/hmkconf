@@ -44,6 +44,7 @@ describe("keyboardConfigSchema", () => {
           currentEffect: 1,
           solidColor: { r: 255, g: 0, b: 0 },
           secondaryColor: { r: 255, g: 255, b: 255 },
+          backgroundColor: { r: 255, g: 255, b: 255 },
           effectSpeed: 128,
           sleepTimeout: 0,
           layerIndicatorMode: 0,

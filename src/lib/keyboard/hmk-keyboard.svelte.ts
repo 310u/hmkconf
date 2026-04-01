@@ -223,6 +223,7 @@ class HMKKeyboard implements Keyboard {
       ...params,
       numKeys: this.metadata.numKeys,
       numLayers: this.metadata.numLayers,
+      firmwareVersion: this.version,
     })
   }
   async setRgbConfig(params: { profile: number; data: HMK_RgbConfig }) {
@@ -230,6 +231,7 @@ class HMKKeyboard implements Keyboard {
       ...params,
       numKeys: this.metadata.numKeys,
       numLayers: this.metadata.numLayers,
+      firmwareVersion: this.version,
     })
   }
   async setHostTime(params: SetHostTimeParams) {

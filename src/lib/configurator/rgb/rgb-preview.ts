@@ -412,6 +412,7 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
   const secR = rgbConfig.secondaryColor.r
   const secG = rgbConfig.secondaryColor.g
   const secB = rgbConfig.secondaryColor.b
+  const backgroundColor = rgbConfig.backgroundColor ?? rgbConfig.secondaryColor
   const baseHue = rgbToHue8(baseR, baseG, baseB)
   const secondaryHue = rgbToHue8(secR, secG, secB)
 
@@ -728,16 +729,16 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
         multi: true,
         speed: rgbConfig.effectSpeed,
       })
-      const bgR = (secR * effectiveBrightness) / 255
-      const bgG = (secG * effectiveBrightness) / 255
-      const bgB = (secB * effectiveBrightness) / 255
+      const bgActiveR = (secR * effectiveBrightness) / 255
+      const bgActiveG = (secG * effectiveBrightness) / 255
+      const bgActiveB = (secB * effectiveBrightness) / 255
       const pressedR = (baseR * effectiveBrightness) / 255
       const pressedG = (baseG * effectiveBrightness) / 255
       const pressedB = (baseB * effectiveBrightness) / 255
       return rgbCss(
-        (pressedR * distance + bgR * (255 - distance)) / 255,
-        (pressedG * distance + bgG * (255 - distance)) / 255,
-        (pressedB * distance + bgB * (255 - distance)) / 255,
+        (pressedR * distance + bgActiveR * (255 - distance)) / 255,
+        (pressedG * distance + bgActiveG * (255 - distance)) / 255,
+        (pressedB * distance + bgActiveB * (255 - distance)) / 255,
       )
     }
     case RGB_EFFECT_TRIGGER_STATE: {
@@ -775,8 +776,8 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
         minutes % 10,
       ]
       const background = scaleRgbColor(
-        rgbConfig.secondaryColor,
-        Math.max(8, Math.floor(effectiveBrightness / 10)),
+        backgroundColor,
+        effectiveBrightness,
       )
       const accent = scaleRgbColor(rgbConfig.secondaryColor, effectiveBrightness)
       const head = scaleRgbColor(
@@ -788,13 +789,14 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
         const bitIndex = layout.digitLeds[digitIndex].indexOf(ledIndex)
         if (bitIndex !== -1) {
           const isOn = (digits[digitIndex] & (1 << (3 - bitIndex))) !== 0
-          return isOn
-            ? rgbCss(
-                (baseR * effectiveBrightness) / 255,
-                (baseG * effectiveBrightness) / 255,
-                (baseB * effectiveBrightness) / 255,
-              )
-            : "transparent"
+          const color = isOn
+            ? {
+                r: (baseR * effectiveBrightness) / 255,
+                g: (baseG * effectiveBrightness) / 255,
+                b: (baseB * effectiveBrightness) / 255,
+              }
+            : background
+          return rgbCss(color.r, color.g, color.b)
         }
       }
 
@@ -815,7 +817,7 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
         return rgbCss(color.r, color.g, color.b)
       }
 
-      return "transparent"
+      return rgbCss(background.r, background.g, background.b)
     }
     case RGB_EFFECT_PER_KEY: {
       const color = rgbConfig.perKeyColors[ledIndex] || { r: 0, g: 0, b: 0 }

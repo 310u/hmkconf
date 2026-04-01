@@ -9,14 +9,14 @@ export const JOYSTICK_RADIAL_BOUNDARY_DEFAULT = 127
 export const JOYSTICK_MOUSE_SPEED_DEFAULT = 10
 export const JOYSTICK_MOUSE_ACCELERATION_DEFAULT = 255
 export const JOYSTICK_MOUSE_PRESET_COUNT = 4
-export const RGB_TRIGGER_STATE_COLOR_COUNT = 4
 export const EECONFIG_MAGIC_START = 0x0b42494c
 export const EECONFIG_MAGIC_END = 0x0b4b4d48
-export const EECONFIG_VERSION = 0x0111
+export const EECONFIG_VERSION = 0x0112
 export const NUM_KEYS = 64
 export const NUM_LAYERS = 4
 export const NUM_PROFILES = 4
 export const NUM_ADVANCED_KEYS = 32
+export const RGB_TRIGGER_STATE_COLOR_COUNT = 4
 
 export interface Actuation {
   actuationPoint: number
@@ -114,6 +114,7 @@ export interface RgbConfig {
   currentEffect: number
   solidColor: RgbColor
   secondaryColor: RgbColor
+  backgroundColor: RgbColor
   effectSpeed: number
   sleepTimeout: number
   layerIndicatorMode: number
@@ -154,6 +155,10 @@ export interface JoystickState {
   outX: number
   outY: number
   sw: boolean
+  calibratedX: number
+  calibratedY: number
+  correctedX: number
+  correctedY: number
 }
 
 export interface EeconfigCalibration {
@@ -359,15 +364,15 @@ export function parseRgbConfig(reader: DataViewReader): RgbConfig {
   result.currentEffect = reader.uint8()
   result.solidColor = parseRgbColor(reader)
   result.secondaryColor = parseRgbColor(reader)
+  result.backgroundColor = parseRgbColor(reader)
   result.effectSpeed = reader.uint8()
   result.sleepTimeout = reader.uint8()
   result.layerIndicatorMode = reader.uint8()
   result.layerIndicatorKey = reader.uint8()
   result.layerColors = Array.from({ length: 4 }, () => parseRgbColor(reader))
   result.perKeyColors = Array.from({ length: 64 }, () => parseRgbColor(reader))
-  result.triggerStateColors = Array.from(
-    { length: RGB_TRIGGER_STATE_COLOR_COUNT },
-    () => parseRgbColor(reader),
+  result.triggerStateColors = Array.from({ length: 4 }, () =>
+    parseRgbColor(reader),
   )
   return result
 }
@@ -416,6 +421,10 @@ export function parseJoystickState(reader: DataViewReader): JoystickState {
   result.outX = parseInt8(reader)
   result.outY = parseInt8(reader)
   result.sw = parseBool(reader)
+  result.calibratedX = parseInt8(reader)
+  result.calibratedY = parseInt8(reader)
+  result.correctedX = parseInt8(reader)
+  result.correctedY = parseInt8(reader)
   return result
 }
 
