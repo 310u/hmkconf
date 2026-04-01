@@ -1,4 +1,8 @@
 import type { Keyboard } from "$lib/keyboard"
+import {
+  HMK_JOYSTICK_SCROLL_PROFILE_LEGACY,
+  HMK_JOYSTICK_SCROLL_PROFILE_SMOOTH,
+} from "$lib/libhmk/commands/joystick"
 import type {
   HMK_JoystickConfig,
   HMK_JoystickMousePreset,
@@ -12,6 +16,17 @@ export const JOYSTICK_MODE_OPTIONS = [
   { value: "4", label: "Scroll" },
   { value: "5", label: "Cursor 4-way" },
   { value: "6", label: "Cursor 8-way" },
+] as const
+
+export const JOYSTICK_SCROLL_PROFILE_OPTIONS = [
+  {
+    value: String(HMK_JOYSTICK_SCROLL_PROFILE_LEGACY),
+    label: "Legacy",
+  },
+  {
+    value: String(HMK_JOYSTICK_SCROLL_PROFILE_SMOOTH),
+    label: "Smooth",
+  },
 ] as const
 
 type JoystickConfigEqualityOptions = {
@@ -47,8 +62,8 @@ type PersistSharedCalibrationResult = PersistJoystickConfigResult & {
 
 export function getJoystickModeLabel(mode: number) {
   return (
-    JOYSTICK_MODE_OPTIONS.find((entry) => Number(entry.value) === mode)?.label ??
-    "Unknown"
+    JOYSTICK_MODE_OPTIONS.find((entry) => Number(entry.value) === mode)
+      ?.label ?? "Unknown"
   )
 }
 
@@ -116,6 +131,7 @@ export function joystickConfigsEqual(
     left.mouseSpeed === right.mouseSpeed &&
     left.mouseAcceleration === right.mouseAcceleration &&
     left.swDebounceMs === right.swDebounceMs &&
+    left.scrollProfile === right.scrollProfile &&
     (!supportsJoystickMousePresets ||
       (left.activeMousePreset === right.activeMousePreset &&
         left.mousePresets.length === right.mousePresets.length &&

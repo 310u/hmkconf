@@ -6,8 +6,8 @@
   import JoystickCalibrationPanel from "./joystick-calibration-panel.svelte"
   import JoystickLiveDiagnosticsPanel from "./joystick-live-diagnostics-panel.svelte"
   import JoystickSettingsPanel from "./joystick-settings-panel.svelte"
-  import JoystickTransportValidationPanel from "./joystick-transport-validation-panel.svelte"
   import { createJoystickTabController } from "./joystick-tab-controller.svelte"
+  import JoystickTransportValidationPanel from "./joystick-transport-validation-panel.svelte"
 
   const {
     class: className,
@@ -36,8 +36,12 @@
     <JoystickSettingsPanel
       config={controller.config}
       modes={controller.modes}
+      scrollProfiles={controller.scrollProfiles}
       supportsJoystickMousePresets={controller.supportsJoystickMousePresets}
+      supportsJoystickScrollProfiles={controller.supportsJoystickScrollProfiles}
       onModeChange={(mode) => controller.updateConfig({ mode })}
+      onScrollProfileChange={(scrollProfile) =>
+        controller.updateConfig({ scrollProfile })}
       onSelectMousePreset={controller.selectMousePreset}
       onUpdateActiveMousePreset={controller.updateActiveMousePreset}
       onDeadzoneChange={(deadzone) => controller.updateConfig({ deadzone })}

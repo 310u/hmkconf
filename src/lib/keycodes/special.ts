@@ -208,6 +208,14 @@ export const specialKeycodeMetadata: KeycodeMetadata[] = [
     category: "Special",
   },
   {
+    name: "Joy Scroll\nStyle",
+    tooltip:
+      "Switch the joystick scroll behavior between Legacy and Smooth for the current profile",
+    keycode: Keycode.SP_JOY_SCROLL_PROFILE_NEXT,
+    webCodes: [],
+    category: "Special",
+  },
+  {
     name: "RGB\nToggle",
     tooltip: "Toggle RGB lighting on or off for the current profile",
     keycode: Keycode.SP_RGB_TOGGLE,
@@ -277,6 +285,7 @@ export function getSpecialKeycodes(numLayers: number) {
     Keycode.SP_LAYER_LOCK,
     Keycode.SP_JOY_MODE_NEXT,
     Keycode.SP_JOY_PRESET_NEXT,
+    Keycode.SP_JOY_SCROLL_PROFILE_NEXT,
     Keycode.SP_JOY_SCROLL_MO,
     Keycode.SP_RGB_TOGGLE,
     Keycode.SP_RGB_EFFECT_NEXT,

@@ -30,6 +30,7 @@ import type {
   SetJoystickConfigParams,
 } from "$lib/libhmk/commands/joystick"
 import {
+  HMK_JOYSTICK_SCROLL_PROFILE_SMOOTH,
   makeDefaultJoystickMousePresets,
   makeDefaultJoystickRadialBoundaries,
 } from "$lib/libhmk/commands/joystick"
@@ -82,6 +83,7 @@ function defaultJoystickConfig(): HMK_JoystickConfig {
     mouseSpeed: 10,
     mouseAcceleration: 255,
     swDebounceMs: 5,
+    scrollProfile: HMK_JOYSTICK_SCROLL_PROFILE_SMOOTH,
     activeMousePreset: 0,
     mousePresets: makeDefaultJoystickMousePresets(10, 255),
     radialBoundaries: makeDefaultJoystickRadialBoundaries(),

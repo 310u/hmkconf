@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
 import type { HMK_JoystickConfig } from "$lib/libhmk/commands/joystick"
+import { describe, expect, it } from "vitest"
 import {
   buildSelectedMousePresetConfig,
   buildUpdatedActiveMousePresetConfig,
@@ -16,6 +16,7 @@ function makeConfig(): HMK_JoystickConfig {
     mouseSpeed: 12,
     mouseAcceleration: 180,
     swDebounceMs: 5,
+    scrollProfile: 0,
     activeMousePreset: 1,
     mousePresets: [
       { mouseSpeed: 10, mouseAcceleration: 100 },
@@ -69,6 +70,18 @@ describe("joystick config helpers", () => {
         supportsJoystickMousePresets: true,
       }),
     ).toBe(true)
+  })
+
+  it("treats scroll profile changes as a config difference", () => {
+    const left = makeConfig()
+    const right = makeConfig()
+    right.scrollProfile = 1
+
+    expect(
+      joystickConfigsEqual(left, right, {
+        supportsJoystickMousePresets: true,
+      }),
+    ).toBe(false)
   })
 
   it("returns a readable label for joystick modes", () => {

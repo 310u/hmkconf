@@ -11,6 +11,9 @@ export const HMK_JOYSTICK_RADIAL_BOUNDARY_FIRMWARE_VERSION = 0x0109
 export const HMK_JOYSTICK_MOUSE_PRESET_COUNT = 4
 export const HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION = 0x010a
 export const HMK_JOYSTICK_STATE_STAGE_FIRMWARE_VERSION = 0x010b
+export const HMK_JOYSTICK_SCROLL_PROFILE_FIRMWARE_VERSION = 0x010e
+export const HMK_JOYSTICK_SCROLL_PROFILE_LEGACY = 0
+export const HMK_JOYSTICK_SCROLL_PROFILE_SMOOTH = 1
 
 export function makeDefaultJoystickRadialBoundaries() {
   return Array.from(
@@ -35,6 +38,12 @@ export function makeDefaultJoystickMousePresets(
   }))
 }
 
+export function normalizeJoystickScrollProfile(scrollProfile?: number) {
+  return scrollProfile === HMK_JOYSTICK_SCROLL_PROFILE_SMOOTH
+    ? HMK_JOYSTICK_SCROLL_PROFILE_SMOOTH
+    : HMK_JOYSTICK_SCROLL_PROFILE_LEGACY
+}
+
 export const joystickAxisCalibrationSchema = z.object({
   min: uint16Schema,
   center: uint16Schema,
@@ -52,6 +61,7 @@ const joystickConfigBaseSchema = z.object({
   mouseSpeed: uint8Schema,
   mouseAcceleration: uint8Schema,
   swDebounceMs: uint8Schema,
+  scrollProfile: uint8Schema.optional(),
   activeMousePreset: uint8Schema.optional(),
   mousePresets: z
     .array(joystickMousePresetSchema)
@@ -91,6 +101,7 @@ export function normalizeJoystickConfigPresets(
     ...config,
     mouseSpeed: activePreset.mouseSpeed,
     mouseAcceleration: activePreset.mouseAcceleration,
+    scrollProfile: normalizeJoystickScrollProfile(config.scrollProfile),
     activeMousePreset,
     mousePresets,
     radialBoundaries:
@@ -199,8 +210,13 @@ export async function getJoystickConfig(
   const mouseSpeed = reader.uint8()
   const mouseAcceleration = reader.uint8() || 255
   const swDebounceMs = reader.uint8()
-  // Skip legacy reserved bytes.
-  reader.offset += 3
+  const scrollProfile =
+    firmwareVersion >= HMK_JOYSTICK_SCROLL_PROFILE_FIRMWARE_VERSION
+      ? reader.uint8()
+      : HMK_JOYSTICK_SCROLL_PROFILE_LEGACY
+  // Skip the remaining reserved bytes.
+  reader.offset +=
+    firmwareVersion >= HMK_JOYSTICK_SCROLL_PROFILE_FIRMWARE_VERSION ? 2 : 3
   const radialBoundaries =
     firmwareVersion >= HMK_JOYSTICK_RADIAL_BOUNDARY_FIRMWARE_VERSION
       ? Array.from({ length: HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS }, () =>
@@ -227,6 +243,7 @@ export async function getJoystickConfig(
     mouseSpeed,
     mouseAcceleration,
     swDebounceMs,
+    scrollProfile,
     activeMousePreset,
     mousePresets,
     radialBoundaries,
@@ -264,6 +281,7 @@ export async function setJoystickConfig(
   view.setUint8(15, params.config.mouseSpeed)
   view.setUint8(16, params.config.mouseAcceleration)
   view.setUint8(17, params.config.swDebounceMs)
+  view.setUint8(18, normalizeJoystickScrollProfile(params.config.scrollProfile))
   for (let i = 0; i < HMK_JOYSTICK_RADIAL_BOUNDARY_SECTORS; i++) {
     view.setUint8(21 + i, params.config.radialBoundaries[i] ?? 127)
   }

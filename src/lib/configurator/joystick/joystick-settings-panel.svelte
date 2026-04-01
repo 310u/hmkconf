@@ -15,8 +15,11 @@
   let {
     config,
     modes,
+    scrollProfiles,
     supportsJoystickMousePresets,
+    supportsJoystickScrollProfiles,
     onModeChange,
+    onScrollProfileChange,
     onSelectMousePreset,
     onUpdateActiveMousePreset,
     onDeadzoneChange,
@@ -24,8 +27,11 @@
   }: {
     config: HMK_JoystickConfig
     modes: ReadonlyArray<ModeOption>
+    scrollProfiles: ReadonlyArray<ModeOption>
     supportsJoystickMousePresets: boolean
+    supportsJoystickScrollProfiles: boolean
     onModeChange: (mode: number) => void | Promise<void>
+    onScrollProfileChange: (scrollProfile: number) => void | Promise<void>
     onSelectMousePreset: (index: number) => void | Promise<void>
     onUpdateActiveMousePreset: (
       preset: Partial<HMK_JoystickMousePreset>,
@@ -43,9 +49,7 @@
     </span>
   </div>
   <Select.Root
-    bind:value={
-      () => String(config.mode), (v) => onModeChange(Number(v))
-    }
+    bind:value={() => String(config.mode), (v) => onModeChange(Number(v))}
     type="single"
   >
     <Select.Trigger class="w-64" size="sm">
@@ -60,10 +64,38 @@
   </Select.Root>
 </div>
 
+{#if supportsJoystickScrollProfiles}
+  <div class="flex flex-col gap-3 rounded-xl border bg-card p-4">
+    <div class="grid text-sm">
+      <span class="font-medium">Scroll Profile</span>
+      <span class="text-muted-foreground">
+        Choose between the original stepped wheel feel and a smoother
+        high-frequency profile. This affects Scroll mode and `Joy Scroll
+        (TG/MO)`.
+      </span>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {#each scrollProfiles as profile (profile.value)}
+        <Button
+          size="sm"
+          variant={profile.value === String(config.scrollProfile)
+            ? "default"
+            : "outline"}
+          onclick={() => void onScrollProfileChange(Number(profile.value))}
+        >
+          {profile.label}
+        </Button>
+      {/each}
+    </div>
+  </div>
+{/if}
+
 {#if supportsJoystickMousePresets && (config.mode === 1 || config.mode === 4)}
   <div class="flex flex-col gap-3 rounded-xl border bg-card p-4">
     <div class="grid text-sm">
-      <span class="font-medium">Mouse Preset {config.activeMousePreset + 1}</span>
+      <span class="font-medium"
+        >Mouse Preset {config.activeMousePreset + 1}</span
+      >
       <span class="text-muted-foreground">
         Store four speed and acceleration pairs, then cycle them from the keymap
         with `Joy Preset Next`.
@@ -87,7 +119,9 @@
   <div class="flex flex-col gap-2">
     <div class="grid text-sm">
       <span class="font-medium">Mouse Speed: {config.mouseSpeed}</span>
-      <span class="text-muted-foreground">Adjust how fast the cursor moves.</span>
+      <span class="text-muted-foreground"
+        >Adjust how fast the cursor moves.</span
+      >
     </div>
     <Slider
       type="single"

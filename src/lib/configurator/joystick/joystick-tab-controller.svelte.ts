@@ -2,6 +2,7 @@ import type { Keyboard } from "$lib/keyboard"
 import type { HMK_Options } from "$lib/libhmk"
 import {
   HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION,
+  HMK_JOYSTICK_SCROLL_PROFILE_FIRMWARE_VERSION,
   type HMK_JoystickConfig,
   type HMK_JoystickMousePreset,
   type HMK_JoystickState,
@@ -10,32 +11,20 @@ import { displayVersion } from "$lib/utils"
 import { untrack } from "svelte"
 import { toast } from "svelte-sonner"
 import {
+  buildSelectedMousePresetConfig,
+  buildUpdatedActiveMousePresetConfig,
+  getJoystickModeLabel,
+  JOYSTICK_MODE_OPTIONS,
+  JOYSTICK_SCROLL_PROFILE_OPTIONS,
+  persistJoystickConfigToKeyboard,
+  persistSharedCalibrationToKeyboard,
+} from "./joystick-config"
+import {
   buildJoystickDiagnosticLog,
   circularityScoreDelta,
   describeLinuxHostPrediction,
   roundValue,
 } from "./joystick-diagnostic-log"
-import {
-  buildSelectedMousePresetConfig,
-  buildUpdatedActiveMousePresetConfig,
-  getJoystickModeLabel,
-  JOYSTICK_MODE_OPTIONS,
-  persistJoystickConfigToKeyboard,
-  persistSharedCalibrationToKeyboard,
-} from "./joystick-config"
-import {
-  circularityTone as getCircularityToneClass,
-  detectLinuxHost as isLinuxUserAgent,
-  getCurrentGamepadTransport as describeCurrentGamepadTransport,
-  getFreshCaptureStatus as describeFreshCaptureStatus,
-  getFreshHostSubtitle as describeFreshHostSubtitle,
-  getGamepadHostValidationMode as describeGamepadHostValidationMode,
-  getHostCircularitySubtitle as describeHostCircularitySubtitle,
-  getHostGamepadBackend as describeHostGamepadBackend,
-  getHostGamepadStatus as describeHostGamepadStatus,
-  getTransportValidationAdvice as describeTransportValidationAdvice,
-  supportsHostTransportComparison as canCompareHostTransport,
-} from "./joystick-diagnostics-status"
 import {
   applyJoystickCircularCorrection,
   applyJoystickRadialDeadzone,
@@ -52,6 +41,19 @@ import {
   type JoystickDiagnosticSample,
   type JoystickVector,
 } from "./joystick-diagnostics"
+import {
+  supportsHostTransportComparison as canCompareHostTransport,
+  getCurrentGamepadTransport as describeCurrentGamepadTransport,
+  getFreshCaptureStatus as describeFreshCaptureStatus,
+  getFreshHostSubtitle as describeFreshHostSubtitle,
+  getGamepadHostValidationMode as describeGamepadHostValidationMode,
+  getHostCircularitySubtitle as describeHostCircularitySubtitle,
+  getHostGamepadBackend as describeHostGamepadBackend,
+  getHostGamepadStatus as describeHostGamepadStatus,
+  getTransportValidationAdvice as describeTransportValidationAdvice,
+  circularityTone as getCircularityToneClass,
+  detectLinuxHost as isLinuxUserAgent,
+} from "./joystick-diagnostics-status"
 import {
   buildHostGamepadState,
   createEmptyHostGamepadState,
@@ -106,9 +108,13 @@ export function createJoystickTabController(
   )
 
   const modes = JOYSTICK_MODE_OPTIONS
+  const scrollProfiles = JOYSTICK_SCROLL_PROFILE_OPTIONS
 
   const supportsJoystickMousePresets = $derived.by(
     () => keyboard.version >= HMK_JOYSTICK_MOUSE_PRESET_FIRMWARE_VERSION,
+  )
+  const supportsJoystickScrollProfiles = $derived.by(
+    () => keyboard.version >= HMK_JOYSTICK_SCROLL_PROFILE_FIRMWARE_VERSION,
   )
 
   let centerSamplesX = $state<number[]>([])
@@ -536,7 +542,9 @@ export function createJoystickTabController(
     computeJoystickCircularity(displayedSweepOutputPoints),
   )
   const isLinuxHost = $derived.by(() =>
-    isLinuxUserAgent(typeof navigator === "undefined" ? null : navigator.userAgent),
+    isLinuxUserAgent(
+      typeof navigator === "undefined" ? null : navigator.userAgent,
+    ),
   )
   const hostGamepadBackend = $derived.by(() =>
     describeHostGamepadBackend(
@@ -611,10 +619,22 @@ export function createJoystickTabController(
       centerSamplesX = [...untrack(() => centerSamplesX), joystickState.rawX]
       centerSamplesY = [...untrack(() => centerSamplesY), joystickState.rawY]
     } else if (calibrationPhase === "max") {
-      minX = Math.min(untrack(() => minX), joystickState.rawX)
-      maxX = Math.max(untrack(() => maxX), joystickState.rawX)
-      minY = Math.min(untrack(() => minY), joystickState.rawY)
-      maxY = Math.max(untrack(() => maxY), joystickState.rawY)
+      minX = Math.min(
+        untrack(() => minX),
+        joystickState.rawX,
+      )
+      maxX = Math.max(
+        untrack(() => maxX),
+        joystickState.rawX,
+      )
+      minY = Math.min(
+        untrack(() => minY),
+        joystickState.rawY,
+      )
+      maxY = Math.max(
+        untrack(() => maxY),
+        joystickState.rawY,
+      )
     }
   })
 
@@ -929,7 +949,9 @@ export function createJoystickTabController(
         hostGamepadState,
         hostGamepadCircularity,
         predictedLinuxJoydevCircularity: livePredictedLinuxHostCircularity,
-        linuxMeasuredVsOutDelta: isLinuxHost ? liveLinuxMeasuredVsOutDelta : null,
+        linuxMeasuredVsOutDelta: isLinuxHost
+          ? liveLinuxMeasuredVsOutDelta
+          : null,
         linuxMeasuredVsPredictedJoydevDelta: isLinuxHost
           ? liveLinuxMeasuredVsPredictionDelta
           : null,
@@ -1107,8 +1129,14 @@ export function createJoystickTabController(
     get modes() {
       return modes
     },
+    get scrollProfiles() {
+      return scrollProfiles
+    },
     get supportsJoystickMousePresets() {
       return supportsJoystickMousePresets
+    },
+    get supportsJoystickScrollProfiles() {
+      return supportsJoystickScrollProfiles
     },
     get joystickState() {
       return joystickState
@@ -1218,4 +1246,6 @@ export function createJoystickTabController(
   }
 }
 
-export type JoystickTabController = ReturnType<typeof createJoystickTabController>
+export type JoystickTabController = ReturnType<
+  typeof createJoystickTabController
+>
