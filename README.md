@@ -4,9 +4,14 @@ Fork of [peppapighs/hmkconf](https://github.com/peppapighs/hmkconf) — The offi
 
 This configurator allows you to customize your Hall-effect keyboard's settings in real-time without needing to recompile or flash the firmware.
 
+`hmkconf` works with any compatible `libhmk` keyboard definition, but the
+connected device still needs to be flashed with the firmware build generated for
+that exact keyboard.
+
 ## Features
 
 - **Real-time Configuration**: Instantly apply settings over raw HID with no recompilation or reflashing.
+- **Safe Command Transport**: Commands are serialized in a strict request/response flow so they match current `libhmk` firmware, which accepts one queued raw HID command at a time.
 - **Desktop Application (Electron)**: Run `hmkconf` as a local desktop app while keeping the existing WebHID-based configurator logic.
 - **Desktop Application (Tauri)** (Experimental): Legacy shell kept in-tree, but Electron is the practical desktop target right now.
 - **Keymap Management**: Map standard keycodes, advanced macros, and combos across multiple layers.
@@ -49,6 +54,11 @@ bun dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in a Chromium-based browser (Chrome, Edge, Brave) to use the WebHID connection.
+
+When connecting real hardware, make sure the keyboard is running the
+keyboard-specific `libhmk` firmware image for that board. `hmkconf` reads the
+firmware metadata from the device to discover its layout and optional tabs such
+as RGB, joystick, and encoder remapping.
 
 ## Demo Mode
 
@@ -147,6 +157,7 @@ The compiled binaries will be located in the `src-tauri/target/release/bundle/` 
 - **Electron Dependencies**: `desktop:dev` and `desktop` require the `electron` dev dependency to be installed locally with `bun install`.
 - **Tauri Desktop App (Experimental)**: The current Tauri shell is still not a complete replacement for the browser/Electron path because it does not yet provide a native HID bridge.
 - **Browser Support**: Safari and Firefox do not support WebHID natively. Use a Chromium-based browser or the Electron desktop app.
+- **Single-Flight RAW HID Transport**: `hmkconf` already serializes commands to match current `libhmk` firmware behavior. If you debug the device with separate scripts or tools at the same time, make sure they also wait for each response before sending the next command.
 - **Slider UI**: Slider support exists in `libhmk`, but `hmkconf` does not yet provide a dedicated slider configuration screen.
 - **Encoder Metadata Dependency**: The encoder tab only appears when firmware metadata exposes encoder directions as virtual keys.
 - Background HID polling may occasionally fail or require a reconnect if the device is disconnected abruptly.
