@@ -24,8 +24,8 @@
 
   {#if calibrationPhase === "idle"}
     <p class="mb-4 text-sm text-muted-foreground">
-      Click below to calibrate the joystick's resting center and maximum
-      ranges. Mouse/scroll output is temporarily disabled during calibration.
+      Click below to calibrate the joystick's resting center and maximum ranges.
+      Mouse/scroll output is temporarily disabled during calibration.
       {#if numProfiles > 1}
         The measured center, travel range, and boundary map are shared across
         all profiles, while profile-specific behavior like mode and deadzone
@@ -50,21 +50,18 @@
   {:else}
     <div class="mb-4 rounded-lg bg-primary/10 p-4">
       {#if calibrationPhase === "rest"}
-        <p class="font-medium text-foreground">
-          Step 1: Release the joystick.
-        </p>
+        <p class="font-medium text-foreground">Step 1: Release the joystick.</p>
         <p class="mt-1 text-sm text-muted-foreground">
-          Do not touch the joystick so its natural center point can be
-          recorded.
+          Do not touch the joystick so its natural center point can be recorded.
         </p>
       {:else if calibrationPhase === "max"}
         <p class="font-medium text-foreground">
           Step 2: Move the joystick in all directions.
         </p>
         <p class="mt-1 text-sm text-muted-foreground">
-          Roll it slowly around the outer edge a few times to record the
-          maximum range. Aim to cover all four quadrants while keeping the
-          Sweep Circularity card as high as possible.
+          Roll it slowly around the outer edge a few times to record the maximum
+          range. Aim to cover all four quadrants while keeping the Sweep
+          Circularity card as high as possible.
         </p>
       {/if}
     </div>

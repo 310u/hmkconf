@@ -25,12 +25,7 @@ describe("joystick host gamepad helpers", () => {
   it("detects the active axis pair from accumulated history", () => {
     const axesHistory = Array.from({ length: 12 }, (_, index) => {
       const phase = (Math.PI * 2 * index) / 12
-      return [
-        Math.cos(phase) * 0.9,
-        Math.sin(phase) * 0.85,
-        0.02,
-        -0.03,
-      ]
+      return [Math.cos(phase) * 0.9, Math.sin(phase) * 0.85, 0.02, -0.03]
     })
 
     expect(detectHostGamepadAxisPair(axesHistory)).toEqual([0, 1])

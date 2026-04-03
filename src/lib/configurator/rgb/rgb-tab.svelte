@@ -20,7 +20,6 @@
     rgbEffectOptions,
     triggerStateEditors,
   } from "./rgb-constants"
-  import RgbPrimaryColorPanel from "./rgb-primary-color-panel.svelte"
   import {
     buildDigitalRainColumns,
     buildRgbLedIndexByKey,
@@ -35,6 +34,7 @@
     rgbToHue8,
     scale8,
   } from "./rgb-preview"
+  import RgbPrimaryColorPanel from "./rgb-primary-color-panel.svelte"
   import RgbSecondaryColorPanel from "./rgb-secondary-color-panel.svelte"
   import RgbTriggerStatePanel from "./rgb-trigger-state-panel.svelte"
 
@@ -293,30 +293,26 @@
 
           if (effectChanged) {
             previewDynamicColors = previewDynamicColors.map(() =>
-              randomDynamicColor(
-                {
-                  effect,
-                  tick,
-                  brightness: rgbConfig!.globalBrightness,
-                  baseHue,
-                  effectSpeed: rgbConfig!.effectSpeed,
-                },
-              ),
+              randomDynamicColor({
+                effect,
+                tick,
+                brightness: rgbConfig!.globalBrightness,
+                baseHue,
+                effectSpeed: rgbConfig!.effectSpeed,
+              }),
             )
           }
 
           const period = effect === 24 ? 10 : 5
           if (tick % period === 0 && tick !== lastRandomTick) {
             const index = Math.floor(Math.random() * ledCount())
-            const c = randomDynamicColor(
-              {
-                effect,
-                tick,
-                brightness: rgbConfig.globalBrightness,
-                baseHue,
-                effectSpeed: rgbConfig.effectSpeed,
-              },
-            )
+            const c = randomDynamicColor({
+              effect,
+              tick,
+              brightness: rgbConfig.globalBrightness,
+              baseHue,
+              effectSpeed: rgbConfig.effectSpeed,
+            })
             previewDynamicColors[index] = c
             previewDynamicColors = [...previewDynamicColors]
             lastRandomTick = tick
@@ -422,10 +418,7 @@
   })
 
   $effect(() => {
-    if (
-      tab !== "rgb" ||
-      rgbConfig?.currentEffect !== RGB_EFFECT_BINARY_CLOCK
-    ) {
+    if (tab !== "rgb" || rgbConfig?.currentEffect !== RGB_EFFECT_BINARY_CLOCK) {
       return
     }
 
@@ -509,9 +502,8 @@
         {rgbConfig}
         rgbEffectAnalog={RGB_EFFECT_ANALOG}
         rgbEffectBinaryClock={RGB_EFFECT_BINARY_CLOCK}
-        supportsBackgroundColor={
-          keyboard.version >= HMK_RGB_BACKGROUND_COLOR_FIRMWARE_VERSION
-        }
+        supportsBackgroundColor={keyboard.version >=
+          HMK_RGB_BACKGROUND_COLOR_FIRMWARE_VERSION}
         onUpdateConfig={updateConfig}
       />
 

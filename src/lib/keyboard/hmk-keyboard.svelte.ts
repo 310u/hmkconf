@@ -66,9 +66,9 @@ import {
   setRgbConfig,
   type HMK_RgbConfig,
 } from "$lib/libhmk/commands/rgb"
-import { setHostTime } from "$lib/libhmk/commands/time"
 import { getSerial } from "$lib/libhmk/commands/serial"
 import { getTickRate, setTickRate } from "$lib/libhmk/commands/tick-rate"
+import { setHostTime } from "$lib/libhmk/commands/time"
 import { displayVersion, isWebHIDSSupported } from "$lib/utils"
 import type {
   DuplicateProfileParams,

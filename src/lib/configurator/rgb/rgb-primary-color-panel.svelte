@@ -24,8 +24,7 @@
   } = $props()
 </script>
 
-{#if rgbConfig.currentEffect !== 0 &&
-  rgbConfig.currentEffect !== rgbEffectTriggerState}
+{#if rgbConfig.currentEffect !== 0 && rgbConfig.currentEffect !== rgbEffectTriggerState}
   <div class="flex flex-col gap-2">
     <div class="grid text-sm text-wrap">
       <span class="font-semibold">

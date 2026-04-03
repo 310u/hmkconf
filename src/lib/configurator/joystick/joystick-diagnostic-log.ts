@@ -1,9 +1,12 @@
-import type { HMK_JoystickConfig, HMK_JoystickState } from "$lib/libhmk/commands/joystick"
 import type {
-  HostGamepadState,
-  HostStickMode,
-} from "./joystick-host-gamepad"
-import type { JoystickCalibrationCandidate, JoystickVector } from "./joystick-diagnostics"
+  HMK_JoystickConfig,
+  HMK_JoystickState,
+} from "$lib/libhmk/commands/joystick"
+import type {
+  JoystickCalibrationCandidate,
+  JoystickVector,
+} from "./joystick-diagnostics"
+import type { HostGamepadState, HostStickMode } from "./joystick-host-gamepad"
 
 export const DIAGNOSTIC_EXPORT_POINT_LIMIT = 60
 export const LINUX_JOYDEV_PREDICTION_ASSUMPTION =
@@ -217,13 +220,7 @@ function sampledStickSummary(sampledStick: HostStickMode) {
 export function buildJoystickDiagnosticLog(
   params: BuildJoystickDiagnosticLogParams,
 ) {
-  const {
-    keyboard,
-    transport,
-    joystick,
-    diagnostics,
-    guidance,
-  } = params
+  const { keyboard, transport, joystick, diagnostics, guidance } = params
 
   return {
     generatedAt: new Date().toISOString(),
@@ -269,7 +266,8 @@ export function buildJoystickDiagnosticLog(
         linuxMeasuredVsOutDelta: transport.linuxMeasuredVsOutDelta,
         linuxMeasuredVsPredictedJoydevDelta:
           transport.linuxMeasuredVsPredictedJoydevDelta,
-        linuxMeasurementInterpretation: transport.linuxMeasurementInterpretation,
+        linuxMeasurementInterpretation:
+          transport.linuxMeasurementInterpretation,
         pointsTail: serializePointTail(transport.hostGamepadPoints),
       },
     },

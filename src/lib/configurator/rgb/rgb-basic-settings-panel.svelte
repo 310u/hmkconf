@@ -45,8 +45,9 @@
     type="single"
   >
     <Select.Trigger class="w-64" size="sm">
-      {effectOptions.find((effect) => effect.value === String(rgbConfig.currentEffect))
-        ?.label || "Unknown"}
+      {effectOptions.find(
+        (effect) => effect.value === String(rgbConfig.currentEffect),
+      )?.label || "Unknown"}
     </Select.Trigger>
     <Select.Content class="w-[var(--bits-select-anchor-width)]">
       {#each effectOptions as effect (effect.value)}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button"
-  import { cn } from "$lib/utils"
   import type { HMK_JoystickState } from "$lib/libhmk/commands/joystick"
+  import { cn } from "$lib/utils"
   import type { CircularityReport } from "./joystick-diagnostic-log"
   import JoystickDiagnosticPlot from "./joystick-diagnostic-plot.svelte"
   import type { JoystickVector } from "./joystick-diagnostics"

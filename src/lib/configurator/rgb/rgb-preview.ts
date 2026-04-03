@@ -210,12 +210,15 @@ export function randomDynamicColor(params: {
   return hsvToRgb(baseHue, 255, stValue)
 }
 
-function buildBinaryClockLayout(metadata: RgbPreviewMetadata): BinaryClockLayout {
+function buildBinaryClockLayout(
+  metadata: RgbPreviewMetadata,
+): BinaryClockLayout {
   const ledCount = getRgbLedCount(metadata)
   const uniqueY = Array.from(
     new Set(
-      Array.from({ length: ledCount }, (_, ledIndex) =>
-        getRgbLedCoordsByIndex(metadata, ledIndex).y,
+      Array.from(
+        { length: ledCount },
+        (_, ledIndex) => getRgbLedCoordsByIndex(metadata, ledIndex).y,
       ),
     ),
   ).sort((left, right) => left - right)
@@ -276,7 +279,8 @@ function previewReactiveIntensity(params: {
   multi: boolean
   speed: number
 }) {
-  const { metadata, previewPresses, time, ledIndex, mode, multi, speed } = params
+  const { metadata, previewPresses, time, ledIndex, mode, multi, speed } =
+    params
   const sources = multi ? previewPresses : previewPresses.slice(-1)
   const point = getRgbLedCoordsByIndex(metadata, ledIndex)
   let best = 255
@@ -625,7 +629,9 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
       const heat = qsub8(qadd8(170, temperature), 170)
       const value = scale8(heat * 3, effectiveBrightness)
       const color = hsvToRgb(hue, 255, value)
-      return temperature === 0 ? "transparent" : rgbCss(color.r, color.g, color.b)
+      return temperature === 0
+        ? "transparent"
+        : rgbCss(color.r, color.g, color.b)
     }
     case 33: {
       const value = previewDigitalRain[ledIndex] ?? 0
@@ -677,7 +683,8 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
       else if (effect === 35) {
         hue = (baseHue + scale8(255 - reactiveEffect, 64)) & 0xff
       } else {
-        if (effect === 40 || effect === 41) hue = (baseHue + ((y - 127) >> 2)) & 0xff
+        if (effect === 40 || effect === 41)
+          hue = (baseHue + ((y - 127) >> 2)) & 0xff
         value = qadd8(value, 255 - reactiveEffect)
       }
       const color = hsvToRgb(hue, 255, value)
@@ -715,7 +722,10 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
     }
     case 50: {
       const ledTime = (tick + ((ledIndex * 315) & 0xff)) & 0xff
-      const value = scale8(Math.abs(sin8(ledTime) - 128) * 2, effectiveBrightness)
+      const value = scale8(
+        Math.abs(sin8(ledTime) - 128) * 2,
+        effectiveBrightness,
+      )
       const color = hsvToRgb(baseHue, 255, value)
       return rgbCss(color.r, color.g, color.b)
     }
@@ -760,7 +770,8 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
     case RGB_EFFECT_BINARY_CLOCK: {
       const layout = buildBinaryClockLayout(metadata)
       if (!layout.valid) {
-        const pulse = ((Math.floor(time / 10) & 1) === 0 ? 1 : 0) * effectiveBrightness
+        const pulse =
+          ((Math.floor(time / 10) & 1) === 0 ? 1 : 0) * effectiveBrightness
         const color = scaleRgbColor(rgbConfig.solidColor, pulse)
         return pulse > 0 ? rgbCss(color.r, color.g, color.b) : "transparent"
       }
@@ -775,17 +786,21 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
         Math.floor(minutes / 10),
         minutes % 10,
       ]
-      const background = scaleRgbColor(
-        backgroundColor,
+      const background = scaleRgbColor(backgroundColor, effectiveBrightness)
+      const accent = scaleRgbColor(
+        rgbConfig.secondaryColor,
         effectiveBrightness,
       )
-      const accent = scaleRgbColor(rgbConfig.secondaryColor, effectiveBrightness)
       const head = scaleRgbColor(
         rgbConfig.solidColor,
         Math.floor((((seconds % 6) + 1) * effectiveBrightness) / 6),
       )
 
-      for (let digitIndex = 0; digitIndex < layout.digitLeds.length; digitIndex++) {
+      for (
+        let digitIndex = 0;
+        digitIndex < layout.digitLeds.length;
+        digitIndex++
+      ) {
         const bitIndex = layout.digitLeds[digitIndex].indexOf(ledIndex)
         if (bitIndex !== -1) {
           const isOn = (digits[digitIndex] & (1 << (3 - bitIndex))) !== 0
@@ -809,11 +824,7 @@ export function getRgbPreviewLedColor(params: GetRgbPreviewLedColorParams) {
       if (secondIndex !== -1) {
         const step = Math.floor(seconds / 6)
         const color =
-          secondIndex < step
-            ? accent
-            : secondIndex === step
-              ? head
-              : background
+          secondIndex < step ? accent : secondIndex === step ? head : background
         return rgbCss(color.r, color.g, color.b)
       }
 

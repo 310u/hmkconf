@@ -201,7 +201,8 @@ export async function setRgbConfig(
   params: SetRgbConfigParams,
 ) {
   const hasBackgroundColor = supportsBackgroundColor(params.firmwareVersion)
-  const backgroundColor = params.data.backgroundColor ?? params.data.secondaryColor
+  const backgroundColor =
+    params.data.backgroundColor ?? params.data.secondaryColor
 
   // Serialize to raw bytes
   const rawBytes: number[] = []

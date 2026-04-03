@@ -244,7 +244,9 @@
       <div>Outer Samples: {sweepCircularity.outerSampleCount}</div>
       <div>Quadrants: {sweepCircularity.quadrantCoverage}/4</div>
       <div>Axis Ratio: {Math.round(sweepCircularity.axisRatio * 100)}%</div>
-      <div>Radius Spread: {Math.round(sweepCircularity.radiusSpread * 100)}%</div>
+      <div>
+        Radius Spread: {Math.round(sweepCircularity.radiusSpread * 100)}%
+      </div>
     </div>
   </div>
 </div>

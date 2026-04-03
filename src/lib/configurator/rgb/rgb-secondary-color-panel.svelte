@@ -17,9 +17,7 @@
   } = $props()
 </script>
 
-{#if [2, 16, 20, 48, 49, rgbEffectAnalog, rgbEffectBinaryClock].includes(
-  rgbConfig.currentEffect,
-)}
+{#if [2, 16, 20, 48, 49, rgbEffectAnalog, rgbEffectBinaryClock].includes(rgbConfig.currentEffect)}
   <div class="flex flex-col gap-2">
     <div class="grid text-sm text-wrap">
       <span class="font-semibold"
@@ -29,7 +27,7 @@
             ? "Base Color"
             : rgbConfig.currentEffect === rgbEffectBinaryClock
               ? "Seconds / Grid Color"
-            : "Secondary Color"}</span
+              : "Secondary Color"}</span
       >
     </div>
     <div class="flex flex-col gap-3 rounded-md border p-4">
@@ -85,8 +83,7 @@
       ></div>
     </div>
 
-    {#if supportsBackgroundColor &&
-      rgbConfig.currentEffect === rgbEffectBinaryClock}
+    {#if supportsBackgroundColor && rgbConfig.currentEffect === rgbEffectBinaryClock}
       <div class="grid text-sm text-wrap">
         <span class="font-semibold">Background Color</span>
       </div>
@@ -147,10 +144,11 @@
         </div>
         <div
           class="mt-1 h-8 w-full rounded-md border shadow-sm"
-          style="background-color: rgb({(rgbConfig.backgroundColor ??
-            rgbConfig.secondaryColor).r}, {(rgbConfig.backgroundColor ??
-            rgbConfig.secondaryColor).g}, {(rgbConfig.backgroundColor ??
-            rgbConfig.secondaryColor).b})"
+          style="background-color: rgb({(
+            rgbConfig.backgroundColor ?? rgbConfig.secondaryColor
+          ).r}, {(rgbConfig.backgroundColor ?? rgbConfig.secondaryColor).g}, {(
+            rgbConfig.backgroundColor ?? rgbConfig.secondaryColor
+          ).b})"
         ></div>
       </div>
     {/if}

@@ -16,34 +16,8 @@ function dataViewFromBytes(bytes: number[]) {
 describe("rgb commands", () => {
   it("parses backgroundColor from the firmware payload", async () => {
     const responseBytes = [
-      1,
-      180,
-      52,
-      10,
-      20,
-      30,
-      40,
-      50,
-      60,
-      70,
-      80,
-      90,
-      100,
-      5,
-      2,
-      7,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
+      1, 180, 52, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 5, 2, 7, 1, 2, 3, 4,
+      5, 6, 7, 8, 9, 10, 11, 12,
     ]
 
     const mockCommander = {
@@ -110,22 +84,7 @@ describe("rgb commands", () => {
     expect(call.payload[1]).toBe(0)
     expect(call.payload[2]).toBe(28)
     expect(call.payload.slice(3, 19)).toEqual([
-      1,
-      180,
-      52,
-      10,
-      20,
-      30,
-      40,
-      50,
-      60,
-      70,
-      80,
-      90,
-      100,
-      5,
-      2,
-      7,
+      1, 180, 52, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 5, 2, 7,
     ])
   })
 
@@ -161,37 +120,15 @@ describe("rgb commands", () => {
       } as HMK_RgbConfig,
     })
 
-    const payload = mockCommander.sendCommand.mock.calls[0][0].payload as number[]
+    const payload = mockCommander.sendCommand.mock.calls[0][0]
+      .payload as number[]
     expect(payload.slice(12, 15)).toEqual([6, 5, 4])
   })
 
   it("parses legacy firmware payloads without backgroundColor", async () => {
     const responseBytes = [
-      1,
-      180,
-      52,
-      10,
-      20,
-      30,
-      40,
-      50,
-      60,
-      100,
-      5,
-      2,
-      7,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
+      1, 180, 52, 10, 20, 30, 40, 50, 60, 100, 5, 2, 7, 1, 2, 3, 4, 5, 6, 7, 8,
+      9, 10, 11, 12,
     ]
 
     const mockCommander = {
@@ -246,19 +183,7 @@ describe("rgb commands", () => {
     expect(call.command).toBe(HMK_Command.SET_RGB_CONFIG)
     expect(call.payload[2]).toBe(25)
     expect(call.payload.slice(3, 16)).toEqual([
-      1,
-      180,
-      52,
-      10,
-      20,
-      30,
-      40,
-      50,
-      60,
-      100,
-      5,
-      2,
-      7,
+      1, 180, 52, 10, 20, 30, 40, 50, 60, 100, 5, 2, 7,
     ])
   })
 })

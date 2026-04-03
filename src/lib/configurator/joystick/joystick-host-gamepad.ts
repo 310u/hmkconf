@@ -1,4 +1,7 @@
-import { computeJoystickCircularity, type JoystickVector } from "./joystick-diagnostics"
+import {
+  computeJoystickCircularity,
+  type JoystickVector,
+} from "./joystick-diagnostics"
 
 export const HOST_GAMEPAD_ACTIVE_THRESHOLD = 8
 export const HOST_GAMEPAD_AXIS_SPAN_THRESHOLD = 0.35
@@ -149,8 +152,7 @@ export function detectHostGamepadAxisPair(
 
   if (activeAxes.length < 2) return null
 
-  let bestCircularPair: { pair: [number, number]; score: number } | null =
-    null
+  let bestCircularPair: { pair: [number, number]; score: number } | null = null
   let bestSpanPair: { pair: [number, number]; score: number } | null = null
 
   for (let leftIndex = 0; leftIndex < activeAxes.length; leftIndex += 1) {
@@ -287,7 +289,10 @@ export function buildHostGamepadState(
     return createEmptyHostGamepadState(true, sampledStick)
   }
 
-  const selectedCandidate = selectHostGamepadCandidate(candidates, previousIndex)
+  const selectedCandidate = selectHostGamepadCandidate(
+    candidates,
+    previousIndex,
+  )
   const selectedCandidates = candidates.map((candidate) => ({
     ...candidate,
     selected: candidate.index === selectedCandidate?.index,

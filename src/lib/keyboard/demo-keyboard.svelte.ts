@@ -255,7 +255,9 @@ export class DemoKeyboard implements Keyboard {
   }) {
     this.#state.profiles[profile].rgbConfig = data
   }
-  async setHostTime(_params: SetHostTimeParams) {}
+  async setHostTime(params: SetHostTimeParams) {
+    void params
+  }
   async getJoystickState(): Promise<HMK_JoystickState> {
     return {
       profile: 0,

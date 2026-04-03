@@ -76,9 +76,10 @@
         </div>
         <div
           class="mt-1 h-8 w-full rounded-md border shadow-sm"
-          style="background-color: rgb({triggerStateColor(editor.index).r}, {triggerStateColor(
+          style="background-color: rgb({triggerStateColor(editor.index)
+            .r}, {triggerStateColor(editor.index).g}, {triggerStateColor(
             editor.index,
-          ).g}, {triggerStateColor(editor.index).b})"
+          ).b})"
         ></div>
       </div>
     {/each}
