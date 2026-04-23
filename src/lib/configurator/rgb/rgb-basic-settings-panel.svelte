@@ -1,5 +1,6 @@
 <script lang="ts">
   import Switch from "$lib/components/switch.svelte"
+  import { Input } from "$lib/components/ui/input"
   import * as Select from "$lib/components/ui/select"
   import { Slider } from "$lib/components/ui/slider"
   import type { HMK_RgbConfig } from "$lib/libhmk/commands/rgb"
@@ -71,6 +72,37 @@
     }
     max={255}
     step={1}
+  />
+</div>
+
+<div class="flex flex-col gap-2">
+  <div class="grid text-sm text-wrap">
+    <span class="font-medium">
+      Idle LED Timeout:
+      {rgbConfig.sleepTimeout === 0
+        ? "Disabled"
+        : `${rgbConfig.sleepTimeout} min`}
+    </span>
+    <span class="text-muted-foreground">
+      Turn the LEDs off after this many idle minutes. Set to 0 to disable
+      automatic sleep.
+    </span>
+  </div>
+  <Input
+    class="w-32"
+    max={255}
+    min={0}
+    oninput={(event) => {
+      const nextValue = Number.parseInt(event.currentTarget.value, 10)
+      if (Number.isNaN(nextValue)) return
+
+      onUpdateConfig({
+        sleepTimeout: Math.max(0, Math.min(255, nextValue)),
+      })
+    }}
+    step={1}
+    type="number"
+    value={rgbConfig.sleepTimeout}
   />
 </div>
 
