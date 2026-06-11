@@ -16,7 +16,11 @@
 import type { HMK_Calibration, HMK_Options } from "$lib/libhmk"
 import type { HMK_Actuation } from "$lib/libhmk/actuation"
 import type { HMK_AdvancedKey, HMK_Macro } from "$lib/libhmk/advanced-keys"
-import type { HMK_AnalogInfo } from "$lib/libhmk/commands"
+import type {
+  HMK_AnalogInfo,
+  HMK_AnalogScanConfig,
+  HMK_AnalogScanDiagnostics,
+} from "$lib/libhmk/commands"
 import type {
   GetJoystickConfigParams,
   HMK_JoystickConfig,
@@ -52,7 +56,7 @@ export type SetAdvancedKeysParams = SetProfileArrayParams<HMK_AdvancedKey>
 
 export type GetTickRateParams = GetProfileParams
 export type SetTickRateParams = SetProfileParams<number>
-
+export type SetAnalogScanConfigParams = SetParams<{ muxSampleDelayUs: number }>
 export type GetGamepadButtonsParams = GetProfileParams
 export type SetGamepadButtonsParams = SetProfileArrayParams<number>
 export type GetGamepadOptionsParams = GetProfileParams
@@ -99,6 +103,10 @@ export type KeyboardAction = {
   setAdvancedKeys(params: SetAdvancedKeysParams): Promise<void>
   getTickRate(params: GetTickRateParams): Promise<number>
   setTickRate(params: SetTickRateParams): Promise<void>
+  getAnalogScanConfig?(): Promise<HMK_AnalogScanConfig>
+  setAnalogScanConfig?(params: SetAnalogScanConfigParams): Promise<void>
+  getAnalogScanDiagnostics?(): Promise<HMK_AnalogScanDiagnostics>
+  resetAnalogScanDiagnostics?(): Promise<void>
   getGamepadButtons(params: GetGamepadButtonsParams): Promise<number[]>
   setGamepadButtons(params: SetGamepadButtonsParams): Promise<void>
   getGamepadOptions(

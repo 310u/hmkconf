@@ -39,6 +39,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
   const profileQuery = profileQueryContext.get()
   const optionsQuery = optionsQueryContext.get()
   const { current: options } = $derived(optionsQuery.options)
+  const currentPollingRate = () =>
+    options?.highPollingRateEnabled ? "8,000 Hz" : "1,000 Hz"
 </script>
 
 <div
@@ -57,9 +59,12 @@ this program. If not, see <https://www.gnu.org/licenses/>.
             })
         }
         id="8000hz-polling-rate"
-        title="8000Hz Polling Rate"
-        description="Enable the 8000Hz polling rate for faster response times, but may increase the CPU usage of the host device. Restart the keyboard to apply changes. This setting applies globally across all profiles."
+        title="USB Polling Rate"
+        description="Enable 8000Hz USB polling for faster response. Restart the keyboard to apply changes. This setting applies globally across all profiles."
       />
+      <div class="text-sm text-muted-foreground">
+        Current poll rate: {currentPollingRate()}.
+      </div>
     {/if}
     <div class="flex flex-col gap-2">
       <div class="grid text-sm text-wrap">

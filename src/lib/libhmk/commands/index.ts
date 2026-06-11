@@ -13,7 +13,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { uint8Schema, uint16Schema } from "$lib/integer"
+import { uint8Schema, uint16Schema, uint32Schema } from "$lib/integer"
 import z from "zod"
 
 export enum HMK_Command {
@@ -56,6 +56,15 @@ export enum HMK_Command {
   GET_JOYSTICK_CONFIG,
   SET_JOYSTICK_CONFIG,
   SET_HOST_TIME,
+  GET_TRACKBALL_STATE,
+  GET_MATRIX_SCAN_DIAGNOSTICS,
+  RESET_MATRIX_SCAN_DIAGNOSTICS,
+  GET_ANALOG_SCAN_DIAGNOSTICS,
+  RESET_ANALOG_SCAN_DIAGNOSTICS,
+  GET_ANALOG_RAW_CHANNELS,
+  GET_ANALOG_DEBUG_FRAMES,
+  GET_ANALOG_SCAN_CONFIG,
+  SET_ANALOG_SCAN_CONFIG,
 
   UNKNOWN = 255,
 }
@@ -68,3 +77,31 @@ export const hmkAnalogInfoSchema = z.object({
 })
 
 export type HMK_AnalogInfo = z.infer<typeof hmkAnalogInfoSchema>
+
+export const hmkAnalogScanConfigSchema = z.object({
+  muxSampleDelayUs: uint16Schema,
+})
+
+export type HMK_AnalogScanConfig = z.infer<
+  typeof hmkAnalogScanConfigSchema
+>
+
+export const hmkAnalogScanDiagnosticsSchema = z.object({
+  muxSampleDelayUs: uint16Schema,
+  muxStepCount: uint16Schema,
+  scanCount: uint32Schema,
+  lastScanCycles: uint32Schema,
+  maxScanCycles: uint32Schema,
+  lastScanUs: uint32Schema,
+  maxScanUs: uint32Schema,
+  estimatedScanHz: uint32Schema,
+  badChannelIdCount: uint32Schema,
+  dmaOverrunCount: uint32Schema,
+  overrunCount: uint32Schema,
+  spiErrorCount: uint32Schema,
+  missedScanCount: uint32Schema,
+})
+
+export type HMK_AnalogScanDiagnostics = z.infer<
+  typeof hmkAnalogScanDiagnosticsSchema
+>

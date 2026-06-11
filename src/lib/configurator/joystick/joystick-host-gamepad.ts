@@ -58,8 +58,12 @@ export function createEmptyHostGamepadState(
   }
 }
 
+function roundHostAxis(value: number) {
+  return Number(value.toFixed(4))
+}
+
 function clampHostAxis(value: number) {
-  return Math.max(-127, Math.min(127, value * 127))
+  return roundHostAxis(Math.max(-127, Math.min(127, value * 127)))
 }
 
 export function currentHostStickMode(mode: number | null): HostStickMode {

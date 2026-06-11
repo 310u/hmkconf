@@ -49,6 +49,7 @@ import type {
   ResetProfileParams,
   SetActuationMapParams,
   SetAdvancedKeysParams,
+  SetAnalogScanConfigParams,
   SetGamepadButtonsParams,
   SetGamepadOptionsParams,
   SetHostTimeParams,
@@ -153,6 +154,23 @@ export class DemoKeyboard implements Keyboard {
     ),
   }
 
+  #analogScanConfig = { muxSampleDelayUs: 20 }
+  #analogScanDiagnostics = {
+    muxSampleDelayUs: 20,
+    muxStepCount: 0,
+    scanCount: 0,
+    lastScanCycles: 0,
+    maxScanCycles: 0,
+    lastScanUs: 0,
+    maxScanUs: 0,
+    estimatedScanHz: 0,
+    badChannelIdCount: 0,
+    dmaOverrunCount: 0,
+    overrunCount: 0,
+    spiErrorCount: 0,
+    missedScanCount: 0,
+  }
+
   async disconnect() {}
   async forget() {}
 
@@ -234,6 +252,32 @@ export class DemoKeyboard implements Keyboard {
   }
   async setTickRate({ profile, data }: SetTickRateParams) {
     this.#state.profiles[profile].tickRate = data
+  }
+  async getAnalogScanConfig() {
+    return this.#analogScanConfig
+  }
+  async setAnalogScanConfig({ data }: SetAnalogScanConfigParams) {
+    this.#analogScanConfig = data
+  }
+  async getAnalogScanDiagnostics() {
+    return this.#analogScanDiagnostics
+  }
+  async resetAnalogScanDiagnostics() {
+    this.#analogScanDiagnostics = {
+      muxSampleDelayUs: this.#analogScanConfig.muxSampleDelayUs,
+      muxStepCount: 0,
+      scanCount: 0,
+      lastScanCycles: 0,
+      maxScanCycles: 0,
+      lastScanUs: 0,
+      maxScanUs: 0,
+      estimatedScanHz: 0,
+      badChannelIdCount: 0,
+      dmaOverrunCount: 0,
+      overrunCount: 0,
+      spiErrorCount: 0,
+      missedScanCount: 0,
+    }
   }
   async getMacros({ profile }: GetMacrosParams) {
     return this.#state.profiles[profile].macros

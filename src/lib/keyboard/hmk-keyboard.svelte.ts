@@ -68,6 +68,12 @@ import {
 } from "$lib/libhmk/commands/rgb"
 import { getSerial } from "$lib/libhmk/commands/serial"
 import { getTickRate, setTickRate } from "$lib/libhmk/commands/tick-rate"
+import {
+  getAnalogScanConfig,
+  getAnalogScanDiagnostics,
+  resetAnalogScanDiagnostics,
+  setAnalogScanConfig,
+} from "$lib/libhmk/commands/analog-scan"
 import { setHostTime } from "$lib/libhmk/commands/time"
 import { displayVersion, isWebHIDSSupported } from "$lib/utils"
 import type {
@@ -91,6 +97,7 @@ import type {
   SetMacrosParams,
   SetOptionsParams,
   SetTickRateParams,
+  SetAnalogScanConfigParams,
 } from "."
 import { Commander } from "./commander"
 import type { KeyboardMetadata } from "./metadata"
@@ -199,6 +206,18 @@ class HMKKeyboard implements Keyboard {
   }
   setTickRate(params: SetTickRateParams) {
     return setTickRate(this.commander, params)
+  }
+  async getAnalogScanConfig() {
+    return getAnalogScanConfig(this.commander)
+  }
+  async setAnalogScanConfig(params: SetAnalogScanConfigParams) {
+    return setAnalogScanConfig(this.commander, params)
+  }
+  async getAnalogScanDiagnostics() {
+    return getAnalogScanDiagnostics(this.commander)
+  }
+  async resetAnalogScanDiagnostics() {
+    return resetAnalogScanDiagnostics(this.commander)
   }
   getGamepadButtons(params: GetGamepadButtonsParams) {
     return getGamepadButtons(this.commander, this.metadata, params)
